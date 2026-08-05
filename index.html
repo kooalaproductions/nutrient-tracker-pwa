@@ -38,7 +38,7 @@
     -webkit-text-size-adjust: 100%;
     overscroll-behavior-y: contain;
   }
-  body { padding-bottom: calc(24px + var(--safe-bottom)); }
+  body { padding-bottom: calc(80px + var(--safe-bottom)); }
   header {
     padding: calc(16px + var(--safe-top)) 16px 12px;
     background: var(--accent);
@@ -121,6 +121,11 @@
     font-size: 13px;
     padding: 8px 6px;
     font: inherit;
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   button.primary {
@@ -172,9 +177,10 @@
   .modal .modal-sub { font-size: 12.5px; color: var(--text-secondary); margin-bottom: 16px; }
   .qty-row { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 18px; }
   .qty-btn {
-    width: 42px; height: 42px; border-radius: 50%;
+    width: 44px; height: 44px; border-radius: 50%;
     border: 1px solid var(--border); background: #fff;
     font-size: 20px; color: var(--accent); font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
   }
   .qty-value { font-size: 20px; font-weight: 700; min-width: 90px; text-align: center; }
   .modal-actions { display: flex; gap: 10px; }
@@ -182,10 +188,11 @@
   .modal-actions button.primary { flex: 2; }
 
   .toast {
-    position: fixed; bottom: calc(16px + var(--safe-bottom)); left: 50%; transform: translateX(-50%);
+    position: fixed; bottom: calc(72px + var(--safe-bottom)); left: 50%; transform: translateX(-50%);
     background: #1B1B18; color: #fff; padding: 10px 16px; border-radius: 999px;
     font-size: 13px; opacity: 0; pointer-events: none; transition: opacity 0.2s;
     z-index: 200; white-space: nowrap;
+    max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis;
   }
   .toast.show { opacity: 1; }
 
@@ -201,14 +208,20 @@
   .cal-header h2 { margin: 0; }
   .cal-nav-btn {
     background: none; border: 1px solid var(--border); border-radius: 8px;
-    width: 32px; height: 32px; font-size: 16px; color: var(--accent); font: inherit;
+    width: 44px; height: 44px; font-size: 16px; color: var(--accent); font: inherit;
+    display: flex; align-items: center; justify-content: center;
   }
   .cal-month-label { font-size: 14px; font-weight: 600; }
-  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+  /* cal-grid is pulled slightly outside the .card padding box (negative margin)
+     so 7 columns can reach a 44px min tap target at a 375px viewport:
+     315px card content width + 12px reclaimed - 18px of gap = 309px / 7 ≈ 44.1px */
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; margin: 0 -6px; width: calc(100% + 12px); }
   .cal-weekday { font-size: 10.5px; color: var(--text-secondary); padding-bottom: 4px; }
   .cal-day {
     position: relative;
     aspect-ratio: 1;
+    min-height: 44px;
+    min-width: 44px;
     display: flex; align-items: center; justify-content: center;
     border-radius: 8px; font-size: 13px;
     background: none; border: none; color: var(--text); font: inherit;
@@ -226,6 +239,52 @@
 
   .backup-actions { display: flex; gap: 10px; }
   .backup-actions button { flex: 1; }
+
+  /* bottom nav */
+  .bottom-nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    display: flex;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding-bottom: var(--safe-bottom);
+  }
+  .nav-btn {
+    flex: 1;
+    background: none; border: none; font: inherit;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px;
+    min-height: 56px;
+    font-size: 11.5px;
+    color: var(--text-secondary);
+  }
+  .nav-btn .nav-icon { font-size: 20px; line-height: 1; }
+  .nav-btn.active { color: var(--accent); font-weight: 700; }
+
+  /* supplements */
+  .supplement-summary-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+  .supplement-chip {
+    flex: 0 0 auto; background: var(--accent-light); color: var(--accent);
+    border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 600; white-space: nowrap;
+  }
+  .supplement-cat-header {
+    font-size: 11px; font-weight: 700; color: var(--text-secondary);
+    letter-spacing: 0.04em; margin: 14px 0 6px;
+  }
+  .supplement-cat-header:first-child { margin-top: 0; }
+  .supplement-group-list { display: flex; flex-direction: column; gap: 8px; }
+  .supplement-row { cursor: default; }
+  .supplement-log-btn {
+    flex: 0 0 auto;
+    background: var(--accent-light); color: var(--accent);
+    border: 1px solid var(--accent); border-radius: 8px;
+    font-size: 13px; font-weight: 700; font: inherit;
+    padding: 0 14px; min-height: 44px; min-width: 44px;
+    white-space: nowrap; margin-left: 10px;
+  }
+  .warning-banner {
+    background: #FFF3E0; color: #7A4A00; border: 1px solid #F0DDB8;
+    border-radius: 8px; padding: 10px 12px; font-size: 12.5px; margin-bottom: 14px;
+  }
 </style>
 </head>
 <body>
@@ -238,6 +297,8 @@
 </header>
 
 <main>
+
+  <div id="logView">
 
   <section class="card">
     <h2>Today's totals</h2>
@@ -252,6 +313,11 @@
       <div class="stat"><div class="value" id="totFiber">0g</div><div class="label">fiber</div></div>
       <div class="stat"><div class="value" id="totSodium">0mg</div><div class="label">sodium</div></div>
     </div>
+  </section>
+
+  <section class="card" id="supplementSummaryCard">
+    <h2>Today's supplements</h2>
+    <div class="supplement-summary-row" id="supplementSummaryRow"></div>
   </section>
 
   <section class="card">
@@ -321,7 +387,28 @@
     <input type="file" id="importFile" accept="application/json" style="display:none;" />
   </section>
 
+  </div>
+
+  <div id="supplementsView" style="display:none">
+
+  <section class="card">
+    <h2>Supplements</h2>
+    <input type="text" id="supplementSearchInput" class="search-input" placeholder="Search supplements…" autocomplete="off" />
+    <div id="supplementList"></div>
+  </section>
+
+  </div>
+
 </main>
+
+<nav class="bottom-nav" id="bottomNav">
+  <button class="nav-btn active" id="navLogBtn" data-view="logView" type="button">
+    <span class="nav-icon">📋</span><span>Log</span>
+  </button>
+  <button class="nav-btn" id="navSupplementsBtn" data-view="supplementsView" type="button">
+    <span class="nav-icon">💊</span><span>Supplements</span>
+  </button>
+</nav>
 
 <div class="modal-backdrop" id="modalBackdrop">
   <div class="modal">
@@ -358,6 +445,29 @@
     <div class="modal-actions">
       <button class="secondary" id="confirmModalCancel">Cancel</button>
       <button class="primary" id="confirmModalOk">Continue</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="supplementModalBackdrop">
+  <div class="modal">
+    <h3 id="supplementModalName"></h3>
+    <p class="modal-sub" id="supplementModalMeta"></p>
+    <div class="warning-banner" id="supplementModalWarning" style="display:none;">⚠️ Nutrition data unverified — confirm with your product label</div>
+    <div style="margin-bottom:14px;">
+      <label for="supplementDoseInput">Dose</label>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <input type="number" id="supplementDoseInput" min="0" step="any" style="flex:1;" />
+        <span id="supplementDoseUnitLabel" style="font-size:14px; color:var(--text-secondary); min-width:60px;"></span>
+      </div>
+    </div>
+    <div style="margin-bottom:18px;">
+      <label for="supplementNoteInput">Note (optional)</label>
+      <input type="text" id="supplementNoteInput" placeholder="e.g. with breakfast" autocomplete="off" />
+    </div>
+    <div class="modal-actions">
+      <button class="secondary" id="supplementModalCancel">Cancel</button>
+      <button class="primary" id="supplementModalConfirm">Log it</button>
     </div>
   </div>
 </div>
@@ -428,6 +538,12 @@
       .catch(function () {
         state.vitamins = [];
         showToast("Couldn't load vitamins");
+      })
+      .then(function () {
+        // re-render the supplements list once the fetch resolves (it may
+        // already have been painted once with an empty state.vitamins),
+        // same pattern as how foods.json's fetch feeds into renderAll().
+        renderSupplementList();
       });
   }
 
@@ -479,13 +595,24 @@
     entries.slice().reverse().forEach(function (e) {
       var row = document.createElement("div");
       row.className = "log-entry";
-      var qtyLabel = fmt(e.servingSize * e.multiplier) + " " + e.servingUnit;
-      row.innerHTML =
-        '<div class="log-entry-info">' +
-          '<div class="log-entry-name">' + escapeHtml(e.name) + '</div>' +
-          '<div class="log-entry-meta">' + qtyLabel + ' · ' + fmt(e.calories * e.multiplier) + ' kcal</div>' +
-        '</div>' +
-        '<button class="remove-btn" data-id="' + e.id + '">Remove</button>';
+      if (e.type === "supplement") {
+        var doseLabel = fmt(e.dose) + " " + (e.doseUnit || "");
+        var noteHtml = e.userNote ? " · " + escapeHtml(e.userNote) : "";
+        row.innerHTML =
+          '<div class="log-entry-info">' +
+            '<div class="log-entry-name">💊 ' + escapeHtml(e.itemName || "Supplement") + '</div>' +
+            '<div class="log-entry-meta">' + escapeHtml(doseLabel) + ' · Supplement' + noteHtml + '</div>' +
+          '</div>' +
+          '<button class="remove-btn" data-id="' + e.id + '">Remove</button>';
+      } else {
+        var qtyLabel = fmt(e.servingSize * e.multiplier) + " " + e.servingUnit;
+        row.innerHTML =
+          '<div class="log-entry-info">' +
+            '<div class="log-entry-name">' + escapeHtml(e.name) + '</div>' +
+            '<div class="log-entry-meta">' + qtyLabel + ' · ' + fmt(e.calories * e.multiplier) + ' kcal</div>' +
+          '</div>' +
+          '<button class="remove-btn" data-id="' + e.id + '">Remove</button>';
+      }
       container.appendChild(row);
     });
     container.querySelectorAll(".remove-btn").forEach(function (btn) {
@@ -532,12 +659,76 @@
     });
   }
 
+  // ---------- supplements list (Supplements tab) ----------
+  var SUPPLEMENT_CATEGORY_ORDER = [
+    { key: "vitamin", label: "VITAMINS" },
+    { key: "mineral", label: "MINERALS" },
+    { key: "supplement", label: "SUPPLEMENTS" },
+    { key: "multivitamin", label: "MULTIVITAMINS" }
+  ];
+
+  function renderSupplementList() {
+    var searchEl = document.getElementById("supplementSearchInput");
+    var container = document.getElementById("supplementList");
+    if (!searchEl || !container) return;
+    var query = searchEl.value.trim().toLowerCase();
+
+    if (state.vitamins.length === 0) {
+      container.innerHTML = '<div class="empty">Loading supplements…</div>';
+      return;
+    }
+
+    var items = state.vitamins.filter(function (v) {
+      return !query || v.name.toLowerCase().indexOf(query) !== -1;
+    });
+
+    container.innerHTML = "";
+    if (items.length === 0) {
+      container.innerHTML = '<div class="empty">No supplements match "' + escapeHtml(query) + '".</div>';
+      return;
+    }
+
+    SUPPLEMENT_CATEGORY_ORDER.forEach(function (cat) {
+      var group = items.filter(function (v) { return v.category === cat.key; });
+      if (group.length === 0) return;
+      group.sort(function (a, b) { return a.name.localeCompare(b.name); });
+
+      var header = document.createElement("div");
+      header.className = "supplement-cat-header";
+      header.textContent = cat.label;
+      container.appendChild(header);
+
+      var list = document.createElement("div");
+      list.className = "supplement-group-list";
+      group.forEach(function (v) {
+        var row = document.createElement("div");
+        row.className = "food-row supplement-row";
+        row.innerHTML =
+          '<span>' +
+            '<span class="food-name">💊 ' + escapeHtml(v.name) + '</span>' +
+            '<div class="food-meta">' + escapeHtml(v.brand) + ' · ' + fmt(v.commonDose) + ' ' + escapeHtml(v.doseUnit) + '</div>' +
+          '</span>' +
+          '<button class="supplement-log-btn" type="button" data-id="' + v.id + '">LOG</button>';
+        list.appendChild(row);
+      });
+      container.appendChild(list);
+    });
+
+    container.querySelectorAll(".supplement-log-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        openSupplementModal(btn.getAttribute("data-id"));
+      });
+    });
+  }
+
   function renderAll() {
     renderTotals();
     renderLogList();
     renderFoodList();
     renderCalendar();
     renderRecentDays();
+    renderSupplementList();
+    renderSupplementSummary();
   }
 
   // ---------- log actions ----------
@@ -572,6 +763,7 @@
     renderLogList();
     renderCalendar();
     renderRecentDays();
+    renderSupplementSummary();
     if (historyModalBackdrop.classList.contains("open") && state.historyModalDateKey === dateKey) {
       openHistoryModal(dateKey);
     }
@@ -582,7 +774,10 @@
   // Food entries have no "type" field (implicit type "food"); supplement
   // entries are explicitly tagged type: "supplement" so shared readers
   // (computeTotals, calendar, history modal) can tell them apart.
-  function logSupplement(vitaminId, dose, doseUnit) {
+  // userNote is an optional 4th param: free-text the user types at log time
+  // (e.g. "with breakfast"). It's distinct from entry.notes, which is a
+  // snapshot of the vitamin product's own notes field (dosing caveats etc).
+  function logSupplement(vitaminId, dose, doseUnit, userNote) {
     var key = todayKey();
     if (!state.logEntries[key]) state.logEntries[key] = [];
     var vitamin = state.vitamins.filter(function (v) { return v.id === vitaminId; })[0];
@@ -595,7 +790,8 @@
       itemName: vitamin ? vitamin.name : vitaminId,
       dose: dose,
       doseUnit: doseUnit || (vitamin ? vitamin.doseUnit : ""),
-      notes: vitamin ? (vitamin.notes || "") : ""
+      notes: vitamin ? (vitamin.notes || "") : "",
+      userNote: userNote || ""
     };
     state.logEntries[key].push(entry);
     saveLogEntries();
@@ -615,6 +811,19 @@
     return getTodaySupplementLog().map(function (e) {
       return { itemName: e.itemName, dose: e.dose, doseUnit: e.doseUnit };
     });
+  }
+
+  function renderSupplementSummary() {
+    var container = document.getElementById("supplementSummaryRow");
+    if (!container) return;
+    var items = getDailySupplementSummary();
+    if (items.length === 0) {
+      container.innerHTML = '<div class="empty">No supplements logged today — tap 💊 to add</div>';
+      return;
+    }
+    container.innerHTML = items.map(function (it) {
+      return '<div class="supplement-chip">💊 ' + escapeHtml(it.itemName) + '</div>';
+    }).join("");
   }
 
   // ---------- modal ----------
@@ -650,6 +859,59 @@
   document.getElementById("modalConfirm").addEventListener("click", function () {
     if (state.pendingFood) addLogEntry(state.pendingFood, qty);
     closeModal();
+  });
+
+  // ---------- supplement modal ----------
+  // Keyword scan against a vitamin's notes field to flag low-confidence /
+  // unverified entries. vitamins.json has no boolean "unverified" field —
+  // roughly 12-14 of the 20 items carry cautionary language in notes, but
+  // the exact wording varies ("UNVERIFIED: ...", "could not confirm",
+  // "could not be verified", "not confirmed", "FLAG:", etc.), so this
+  // checks several keywords rather than one rigid substring.
+  var UNVERIFIED_KEYWORDS = [
+    "flag", "unverified", "could not", "not confirmed",
+    "unable to confirm", "low confidence", "low-confidence"
+  ];
+  function isUnverifiedSupplement(v) {
+    if (!v || !v.notes) return false;
+    var notes = v.notes.toLowerCase();
+    return UNVERIFIED_KEYWORDS.some(function (kw) { return notes.indexOf(kw) !== -1; });
+  }
+
+  var supplementModalBackdrop = document.getElementById("supplementModalBackdrop");
+  var pendingSupplement = null;
+
+  function openSupplementModal(vitaminId) {
+    var v = state.vitamins.filter(function (x) { return x.id === vitaminId; })[0];
+    if (!v) return;
+    pendingSupplement = v;
+    document.getElementById("supplementModalName").textContent = v.name;
+    document.getElementById("supplementModalMeta").textContent = v.brand;
+    document.getElementById("supplementDoseInput").value = v.commonDose;
+    document.getElementById("supplementDoseUnitLabel").textContent = v.doseUnit;
+    document.getElementById("supplementNoteInput").value = "";
+    document.getElementById("supplementModalWarning").style.display = isUnverifiedSupplement(v) ? "block" : "none";
+    supplementModalBackdrop.classList.add("open");
+  }
+  function closeSupplementModal() {
+    supplementModalBackdrop.classList.remove("open");
+    pendingSupplement = null;
+  }
+  document.getElementById("supplementModalCancel").addEventListener("click", closeSupplementModal);
+  supplementModalBackdrop.addEventListener("click", function (e) {
+    if (e.target === supplementModalBackdrop) closeSupplementModal();
+  });
+  document.getElementById("supplementModalConfirm").addEventListener("click", function () {
+    if (!pendingSupplement) return;
+    var doseInputVal = Number(document.getElementById("supplementDoseInput").value);
+    var dose = doseInputVal > 0 ? doseInputVal : pendingSupplement.commonDose;
+    var note = document.getElementById("supplementNoteInput").value.trim();
+    var entry = logSupplement(pendingSupplement.id, dose, pendingSupplement.doseUnit, note);
+    closeSupplementModal();
+    // logSupplement already re-renders totals/log list/calendar/recent days;
+    // the supplements summary chip row is new UI it doesn't know about.
+    renderSupplementSummary();
+    showToast("💊 " + entry.itemName + " logged");
   });
 
   // ---------- calendar / history ----------
@@ -880,6 +1142,24 @@
 
   // ---------- search ----------
   document.getElementById("searchInput").addEventListener("input", renderFoodList);
+  document.getElementById("supplementSearchInput").addEventListener("input", renderSupplementList);
+
+  // ---------- bottom nav / view switching ----------
+  // There's no existing tabs/view-switching pattern in this app (it was a
+  // single scrolling page) — this is a minimal addition: two sibling
+  // containers under <main>, toggled via plain display:none/"" and a
+  // small "active" class swap on the nav buttons.
+  var navButtons = document.querySelectorAll(".nav-btn");
+  function switchView(viewId) {
+    document.getElementById("logView").style.display = viewId === "logView" ? "" : "none";
+    document.getElementById("supplementsView").style.display = viewId === "supplementsView" ? "" : "none";
+    navButtons.forEach(function (btn) {
+      btn.classList.toggle("active", btn.getAttribute("data-view") === viewId);
+    });
+  }
+  navButtons.forEach(function (btn) {
+    btn.addEventListener("click", function () { switchView(btn.getAttribute("data-view")); });
+  });
 
   // ---------- init ----------
   function setTodayLabel() {
