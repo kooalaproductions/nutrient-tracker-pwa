@@ -195,6 +195,37 @@
     text-align: center; padding: 6px; border-bottom: 1px solid #F0DDB8;
   }
   .offline-banner.show { display: block; }
+
+  /* history / calendar */
+  .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .cal-header h2 { margin: 0; }
+  .cal-nav-btn {
+    background: none; border: 1px solid var(--border); border-radius: 8px;
+    width: 32px; height: 32px; font-size: 16px; color: var(--accent); font: inherit;
+  }
+  .cal-month-label { font-size: 14px; font-weight: 600; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+  .cal-weekday { font-size: 10.5px; color: var(--text-secondary); padding-bottom: 4px; }
+  .cal-day {
+    position: relative;
+    aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 8px; font-size: 13px;
+    background: none; border: none; color: var(--text); font: inherit;
+  }
+  .cal-day.empty { visibility: hidden; }
+  .cal-day.has-entries { background: var(--accent-light); font-weight: 600; color: var(--accent); }
+  .cal-day.today { box-shadow: inset 0 0 0 1.5px var(--accent); }
+  .recent-days { display: flex; gap: 8px; overflow-x: auto; margin-top: 12px; padding-bottom: 2px; }
+  .recent-day-chip {
+    flex: 0 0 auto; background: #fff; border: 1px solid var(--border); border-radius: 10px;
+    padding: 8px 12px; text-align: center; font: inherit; color: inherit;
+  }
+  .recent-day-chip .rd-date { font-size: 11px; color: var(--text-secondary); }
+  .recent-day-chip .rd-cal { font-size: 13px; font-weight: 700; color: var(--accent); margin-top: 2px; }
+
+  .backup-actions { display: flex; gap: 10px; }
+  .backup-actions button { flex: 1; }
 </style>
 </head>
 <body>
@@ -267,6 +298,29 @@
     </div>
   </section>
 
+  <section class="card">
+    <div class="cal-header">
+      <h2>History</h2>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <button class="cal-nav-btn" id="calPrev">‹</button>
+        <span class="cal-month-label" id="calMonthLabel"></span>
+        <button class="cal-nav-btn" id="calNext">›</button>
+      </div>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="recent-days" id="recentDays"></div>
+  </section>
+
+  <section class="card">
+    <h2>Backup &amp; restore</h2>
+    <p class="food-meta" style="margin-bottom:10px;">Your data only lives on this device. Export a backup now and then, so you can restore it if you clear your browser or switch phones.</p>
+    <div class="backup-actions">
+      <button class="secondary" id="exportBtn">Export backup</button>
+      <button class="secondary" id="importBtn">Restore backup</button>
+    </div>
+    <input type="file" id="importFile" accept="application/json" style="display:none;" />
+  </section>
+
 </main>
 
 <div class="modal-backdrop" id="modalBackdrop">
@@ -285,6 +339,29 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="historyModalBackdrop">
+  <div class="modal">
+    <h3 id="historyModalDate"></h3>
+    <p class="modal-sub" id="historyModalSub"></p>
+    <div class="totals-grid" id="historyModalTotals" style="margin-bottom:16px;"></div>
+    <div id="historyModalList" style="margin-bottom:16px;"></div>
+    <div class="modal-actions">
+      <button class="primary" id="historyModalClose" style="flex:1;">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="confirmModalBackdrop">
+  <div class="modal">
+    <h3 id="confirmModalTitle"></h3>
+    <p class="modal-sub" id="confirmModalBody"></p>
+    <div class="modal-actions">
+      <button class="secondary" id="confirmModalCancel">Cancel</button>
+      <button class="primary" id="confirmModalOk">Continue</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -299,16 +376,21 @@
     preloadedFoods: [],
     customFoods: [],
     logEntries: {},   // { "YYYY-MM-DD": [entry, ...] }
-    pendingFood: null
+    pendingFood: null,
+    historyModalDateKey: null
   };
 
   // ---------- date helpers (local time, no UTC round-trip) ----------
   function todayKey() {
     var d = new Date();
-    var y = d.getFullYear();
-    var m = String(d.getMonth() + 1).padStart(2, "0");
-    var day = String(d.getDate()).padStart(2, "0");
-    return y + "-" + m + "-" + day;
+    return keyFromParts(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+  function keyFromParts(year, month0, day) {
+    return year + "-" + String(month0 + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+  }
+  function partsFromKey(key) {
+    var p = key.split("-").map(Number);
+    return { year: p[0], month0: p[1] - 1, day: p[2] };
   }
 
   // ---------- storage ----------
@@ -341,13 +423,29 @@
     return (Math.round(n * 10) / 10).toString();
   }
 
-  function renderTotals() {
-    var entries = state.logEntries[todayKey()] || [];
+  function computeTotals(entries) {
     var totals = {};
     NUTRIENT_KEYS.forEach(function (k) { totals[k] = 0; });
     entries.forEach(function (e) {
       NUTRIENT_KEYS.forEach(function (k) { totals[k] += e[k] * e.multiplier; });
     });
+    return totals;
+  }
+
+  function totalsGridHtml(totals) {
+    return (
+      '<div class="stat"><div class="value">' + fmt(totals.calories) + '</div><div class="label">kcal</div></div>' +
+      '<div class="stat"><div class="value">' + fmt(totals.protein_g) + 'g</div><div class="label">protein</div></div>' +
+      '<div class="stat"><div class="value">' + fmt(totals.carbs_g) + 'g</div><div class="label">carbs</div></div>' +
+      '<div class="stat"><div class="value">' + fmt(totals.fat_g) + 'g</div><div class="label">fat</div></div>' +
+      '<div class="stat"><div class="value">' + fmt(totals.sugar_g) + 'g</div><div class="label">sugar</div></div>' +
+      '<div class="stat"><div class="value">' + fmt(totals.fiber_g) + 'g</div><div class="label">fiber</div></div>' +
+      '<div class="stat"><div class="value">' + fmt(totals.sodium_mg) + 'mg</div><div class="label">sodium</div></div>'
+    );
+  }
+
+  function renderTotals() {
+    var totals = computeTotals(state.logEntries[todayKey()] || []);
     document.getElementById("totCalories").textContent = fmt(totals.calories);
     document.getElementById("totProtein").textContent = fmt(totals.protein_g) + "g";
     document.getElementById("totCarbs").textContent = fmt(totals.carbs_g) + "g";
@@ -357,9 +455,7 @@
     document.getElementById("totSodium").textContent = fmt(totals.sodium_mg) + "mg";
   }
 
-  function renderLogList() {
-    var entries = state.logEntries[todayKey()] || [];
-    var container = document.getElementById("logList");
+  function renderEntryRows(container, entries, dateKey) {
     container.innerHTML = "";
     if (entries.length === 0) {
       container.innerHTML = '<div class="empty">Nothing logged yet.</div>';
@@ -379,9 +475,13 @@
     });
     container.querySelectorAll(".remove-btn").forEach(function (btn) {
       btn.addEventListener("click", function () {
-        removeLogEntry(btn.getAttribute("data-id"));
+        removeLogEntry(dateKey, btn.getAttribute("data-id"));
       });
     });
+  }
+
+  function renderLogList() {
+    renderEntryRows(document.getElementById("logList"), state.logEntries[todayKey()] || [], todayKey());
   }
 
   function renderFoodList() {
@@ -421,6 +521,8 @@
     renderTotals();
     renderLogList();
     renderFoodList();
+    renderCalendar();
+    renderRecentDays();
   }
 
   // ---------- log actions ----------
@@ -437,16 +539,27 @@
     saveLogEntries();
     renderTotals();
     renderLogList();
+    renderCalendar();
+    renderRecentDays();
     showToast("Logged " + food.name);
   }
 
-  function removeLogEntry(id) {
-    var key = todayKey();
-    var entries = state.logEntries[key] || [];
-    state.logEntries[key] = entries.filter(function (e) { return e.id !== id; });
+  function removeLogEntry(dateKey, id) {
+    var entries = state.logEntries[dateKey] || [];
+    entries = entries.filter(function (e) { return e.id !== id; });
+    if (entries.length === 0) {
+      delete state.logEntries[dateKey];
+    } else {
+      state.logEntries[dateKey] = entries;
+    }
     saveLogEntries();
     renderTotals();
     renderLogList();
+    renderCalendar();
+    renderRecentDays();
+    if (historyModalBackdrop.classList.contains("open") && state.historyModalDateKey === dateKey) {
+      openHistoryModal(dateKey);
+    }
   }
 
   // ---------- modal ----------
@@ -482,6 +595,178 @@
   document.getElementById("modalConfirm").addEventListener("click", function () {
     if (state.pendingFood) addLogEntry(state.pendingFood, qty);
     closeModal();
+  });
+
+  // ---------- calendar / history ----------
+  var calendarState = (function () {
+    var d = new Date();
+    return { year: d.getFullYear(), month0: d.getMonth() };
+  })();
+
+  function renderCalendar() {
+    var year = calendarState.year, month0 = calendarState.month0;
+    document.getElementById("calMonthLabel").textContent =
+      new Date(year, month0, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
+
+    var grid = document.getElementById("calGrid");
+    grid.innerHTML = "";
+    ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].forEach(function (wd) {
+      var el = document.createElement("div");
+      el.className = "cal-weekday";
+      el.textContent = wd;
+      grid.appendChild(el);
+    });
+
+    var startWeekday = new Date(year, month0, 1).getDay();
+    var daysInMonth = new Date(year, month0 + 1, 0).getDate();
+    var todayK = todayKey();
+
+    for (var i = 0; i < startWeekday; i++) {
+      var pad = document.createElement("div");
+      pad.className = "cal-day empty";
+      grid.appendChild(pad);
+    }
+    for (var d = 1; d <= daysInMonth; d++) {
+      var key = keyFromParts(year, month0, d);
+      var hasEntries = (state.logEntries[key] || []).length > 0;
+      var btn = document.createElement("button");
+      btn.className = "cal-day" + (hasEntries ? " has-entries" : "") + (key === todayK ? " today" : "");
+      btn.textContent = d;
+      btn.setAttribute("data-key", key);
+      btn.addEventListener("click", function () { openHistoryModal(this.getAttribute("data-key")); });
+      grid.appendChild(btn);
+    }
+  }
+
+  document.getElementById("calPrev").addEventListener("click", function () {
+    calendarState.month0 -= 1;
+    if (calendarState.month0 < 0) { calendarState.month0 = 11; calendarState.year -= 1; }
+    renderCalendar();
+  });
+  document.getElementById("calNext").addEventListener("click", function () {
+    calendarState.month0 += 1;
+    if (calendarState.month0 > 11) { calendarState.month0 = 0; calendarState.year += 1; }
+    renderCalendar();
+  });
+
+  function renderRecentDays() {
+    var container = document.getElementById("recentDays");
+    var keys = Object.keys(state.logEntries).filter(function (k) { return (state.logEntries[k] || []).length > 0; });
+    keys.sort().reverse();
+    keys = keys.slice(0, 10);
+    container.innerHTML = "";
+    keys.forEach(function (key) {
+      var totals = computeTotals(state.logEntries[key]);
+      var parts = partsFromKey(key);
+      var label = key === todayKey()
+        ? "Today"
+        : new Date(parts.year, parts.month0, parts.day).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      var chip = document.createElement("button");
+      chip.className = "recent-day-chip";
+      chip.innerHTML = '<div class="rd-date">' + label + '</div><div class="rd-cal">' + fmt(totals.calories) + ' kcal</div>';
+      chip.addEventListener("click", function () { openHistoryModal(key); });
+      container.appendChild(chip);
+    });
+  }
+
+  var historyModalBackdrop = document.getElementById("historyModalBackdrop");
+
+  function openHistoryModal(key) {
+    state.historyModalDateKey = key;
+    var entries = state.logEntries[key] || [];
+    var totals = computeTotals(entries);
+    var parts = partsFromKey(key);
+    var d = new Date(parts.year, parts.month0, parts.day);
+    document.getElementById("historyModalDate").textContent =
+      d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+    document.getElementById("historyModalSub").textContent =
+      entries.length ? (entries.length + " item" + (entries.length === 1 ? "" : "s") + " logged") : "Nothing logged this day.";
+    document.getElementById("historyModalTotals").innerHTML = totalsGridHtml(totals);
+    renderEntryRows(document.getElementById("historyModalList"), entries, key);
+    historyModalBackdrop.classList.add("open");
+  }
+  function closeHistoryModal() {
+    historyModalBackdrop.classList.remove("open");
+    state.historyModalDateKey = null;
+  }
+  document.getElementById("historyModalClose").addEventListener("click", closeHistoryModal);
+  historyModalBackdrop.addEventListener("click", function (e) {
+    if (e.target === historyModalBackdrop) closeHistoryModal();
+  });
+
+  // ---------- generic confirm modal ----------
+  var confirmModalBackdrop = document.getElementById("confirmModalBackdrop");
+  var confirmCallback = null;
+  function showConfirm(title, body, onOk) {
+    document.getElementById("confirmModalTitle").textContent = title;
+    document.getElementById("confirmModalBody").textContent = body;
+    confirmCallback = onOk;
+    confirmModalBackdrop.classList.add("open");
+  }
+  function closeConfirm() {
+    confirmModalBackdrop.classList.remove("open");
+    confirmCallback = null;
+  }
+  document.getElementById("confirmModalCancel").addEventListener("click", closeConfirm);
+  confirmModalBackdrop.addEventListener("click", function (e) {
+    if (e.target === confirmModalBackdrop) closeConfirm();
+  });
+  document.getElementById("confirmModalOk").addEventListener("click", function () {
+    var cb = confirmCallback;
+    closeConfirm();
+    if (cb) cb();
+  });
+
+  // ---------- export / import backup ----------
+  document.getElementById("exportBtn").addEventListener("click", function () {
+    var payload = { exportedAt: new Date().toISOString(), customFoods: state.customFoods, logEntries: state.logEntries };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "nutrient-tracker-backup-" + todayKey() + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("Backup downloaded");
+  });
+
+  document.getElementById("importBtn").addEventListener("click", function () {
+    document.getElementById("importFile").click();
+  });
+
+  document.getElementById("importFile").addEventListener("change", function (e) {
+    var file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var data;
+      try {
+        data = JSON.parse(reader.result);
+      } catch (err) {
+        showToast("That file isn't a valid backup");
+        return;
+      }
+      if (!data || typeof data !== "object" || typeof data.logEntries !== "object") {
+        showToast("That file isn't a valid backup");
+        return;
+      }
+      showConfirm(
+        "Restore this backup?",
+        "This replaces all food logs and custom foods currently on this device with the contents of the backup file. This can't be undone.",
+        function () {
+          state.customFoods = Array.isArray(data.customFoods) ? data.customFoods : [];
+          state.logEntries = data.logEntries && typeof data.logEntries === "object" ? data.logEntries : {};
+          saveCustomFoods();
+          saveLogEntries();
+          renderAll();
+          showToast("Backup restored");
+        }
+      );
+    };
+    reader.readAsText(file);
   });
 
   // ---------- add custom food ----------
