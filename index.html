@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Nutrient Tracker</title>
 
 <link rel="manifest" href="manifest.json" />
@@ -213,8 +213,9 @@
   }
   .cal-month-label { font-size: 14px; font-weight: 600; }
   /* cal-grid is pulled slightly outside the .card padding box (negative margin)
-     so 7 columns can reach a 44px min tap target at a 375px viewport:
-     315px card content width + 12px reclaimed - 18px of gap = 309px / 7 ≈ 44.1px */
+     to give 7 columns more room at a 375px viewport, but the grid math alone
+     lands just under 44px (~43.86px, accounting for .card's 1px border).
+     The .cal-day min-width: 44px floor guarantees 44px regardless of grid math. */
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; margin: 0 -6px; width: calc(100% + 12px); }
   .cal-weekday { font-size: 10.5px; color: var(--text-secondary); padding-bottom: 4px; }
   .cal-day {
@@ -280,6 +281,13 @@
     font-size: 13px; font-weight: 700; font: inherit;
     padding: 0 14px; min-height: 44px; min-width: 44px;
     white-space: nowrap; margin-left: 10px;
+  }
+  .unverified-badge {
+    display: inline-block;
+    background: #FFF3CD; color: #856404;
+    font-size: 10.5px; font-weight: 700;
+    padding: 2px 8px; border-radius: 999px;
+    margin-top: 4px;
   }
   .warning-banner {
     background: #FFF3E0; color: #7A4A00; border: 1px solid #F0DDB8;
@@ -707,6 +715,7 @@
           '<span>' +
             '<span class="food-name">💊 ' + escapeHtml(v.name) + '</span>' +
             '<div class="food-meta">' + escapeHtml(v.brand) + ' · ' + fmt(v.commonDose) + ' ' + escapeHtml(v.doseUnit) + '</div>' +
+            (isUnverifiedSupplement(v) ? '<span class="unverified-badge">Verify label</span>' : '') +
           '</span>' +
           '<button class="supplement-log-btn" type="button" data-id="' + v.id + '">LOG</button>';
         list.appendChild(row);
@@ -870,7 +879,7 @@
   // checks several keywords rather than one rigid substring.
   var UNVERIFIED_KEYWORDS = [
     "flag", "unverified", "could not", "not confirmed",
-    "unable to confirm", "low confidence", "low-confidence"
+    "unable to confirm", "low confidence", "low-confidence", "moderate confidence"
   ];
   function isUnverifiedSupplement(v) {
     if (!v || !v.notes) return false;
@@ -1034,19 +1043,61 @@
     if (cb) cb();
   });
 
-  // ---------- export / import backup ----------
-  document.getElementById("exportBtn").addEventListener("click", function () {
-    var payload = { exportedAt: new Date().toISOString(), customFoods: state.customFoods, logEntries: state.logEntries };
+  // ---------- export all data as JSON / weekly macro summary ----------
+  function exportAllDataAsJSON() {
+    // Field kept as "logEntries" (not "foodLog") so a file exported here can still
+    // be restored by the existing importFile handler below, which only reads
+    // data.logEntries. "version" and "settings" are purely additive fields the
+    // import handler ignores, so they don't break the round-trip either.
+    // settings is {} -- there's no settings-backed state anywhere in this app yet
+    // (only nt_customFoods and nt_logEntries exist in localStorage), so there's
+    // nothing real to populate it with.
+    var payload = {
+      exportedAt: new Date().toISOString(),
+      version: "1.0",
+      logEntries: state.logEntries,
+      customFoods: state.customFoods,
+      settings: {}
+    };
     var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");
     a.href = url;
-    a.download = "nutrient-tracker-backup-" + todayKey() + ".json";
+    a.download = "nutrition_log_" + todayKey() + ".json";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     showToast("Backup downloaded");
+  }
+
+  function getWeeklyMacroSummary() {
+    // Last 7 days (today inclusive), oldest to newest. Builds each day from a
+    // real Date object via setDate() and stays in local time throughout -- no
+    // "YYYY-MM-DD" string is ever round-tripped through new Date(string), which
+    // parses as UTC midnight and can land on the wrong local day.
+    var days = [];
+    for (var i = 6; i >= 0; i--) {
+      var d = new Date();
+      d.setDate(d.getDate() - i);
+      var key = keyFromParts(d.getFullYear(), d.getMonth(), d.getDate());
+      var entries = state.logEntries[key] || [];
+      var totals = computeTotals(entries);
+      days.push({
+        date: key,
+        calories: totals.calories,
+        protein: totals.protein_g,
+        carbs: totals.carbs_g,
+        fat: totals.fat_g,
+        logged: entries.length > 0
+      });
+    }
+    return days;
+  }
+
+  // ---------- export / import backup ----------
+  document.getElementById("exportBtn").addEventListener("click", function () {
+    exportAllDataAsJSON();
   });
 
   document.getElementById("importBtn").addEventListener("click", function () {
