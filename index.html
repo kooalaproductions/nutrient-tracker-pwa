@@ -375,6 +375,7 @@
   var state = {
     preloadedFoods: [],
     customFoods: [],
+    vitamins: [],
     logEntries: {},   // { "YYYY-MM-DD": [entry, ...] }
     pendingFood: null,
     historyModalDateKey: null
@@ -417,6 +418,19 @@
     return state.preloadedFoods.concat(state.customFoods);
   }
 
+  // ---------- vitamins / supplements ----------
+  function loadVitamins() {
+    fetch("vitamins.json")
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        state.vitamins = data;
+      })
+      .catch(function () {
+        state.vitamins = [];
+        showToast("Couldn't load vitamins");
+      });
+  }
+
   // ---------- rendering ----------
   function fmt(n) {
     n = Number(n) || 0;
@@ -427,6 +441,7 @@
     var totals = {};
     NUTRIENT_KEYS.forEach(function (k) { totals[k] = 0; });
     entries.forEach(function (e) {
+      if (e.type === "supplement") return; // supplement entries carry no macro fields
       NUTRIENT_KEYS.forEach(function (k) { totals[k] += e[k] * e.multiplier; });
     });
     return totals;
@@ -560,6 +575,46 @@
     if (historyModalBackdrop.classList.contains("open") && state.historyModalDateKey === dateKey) {
       openHistoryModal(dateKey);
     }
+  }
+
+  // ---------- supplement log actions ----------
+  // Supplement entries live in the same nt_logEntries array as food entries.
+  // Food entries have no "type" field (implicit type "food"); supplement
+  // entries are explicitly tagged type: "supplement" so shared readers
+  // (computeTotals, calendar, history modal) can tell them apart.
+  function logSupplement(vitaminId, dose, doseUnit) {
+    var key = todayKey();
+    if (!state.logEntries[key]) state.logEntries[key] = [];
+    var vitamin = state.vitamins.filter(function (v) { return v.id === vitaminId; })[0];
+    var entry = {
+      id: uid(),
+      date: key,
+      loggedAt: new Date().toISOString(),
+      type: "supplement",
+      itemId: vitaminId,
+      itemName: vitamin ? vitamin.name : vitaminId,
+      dose: dose,
+      doseUnit: doseUnit || (vitamin ? vitamin.doseUnit : ""),
+      notes: vitamin ? (vitamin.notes || "") : ""
+    };
+    state.logEntries[key].push(entry);
+    saveLogEntries();
+    renderTotals();
+    renderLogList();
+    renderCalendar();
+    renderRecentDays();
+    showToast("Logged " + entry.itemName);
+    return entry;
+  }
+
+  function getTodaySupplementLog() {
+    return (state.logEntries[todayKey()] || []).filter(function (e) { return e.type === "supplement"; });
+  }
+
+  function getDailySupplementSummary() {
+    return getTodaySupplementLog().map(function (e) {
+      return { itemName: e.itemName, dose: e.dose, doseUnit: e.doseUnit };
+    });
   }
 
   // ---------- modal ----------
@@ -848,6 +903,8 @@
         showToast("Couldn't load preloaded foods");
       })
       .then(renderAll);
+
+    loadVitamins();
 
     // render immediately with whatever we have (custom foods / log), then again once fetch resolves
     renderAll();
