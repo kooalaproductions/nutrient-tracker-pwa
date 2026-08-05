@@ -49,6 +49,14 @@
   }
   header h1 { margin: 0; font-size: 20px; font-weight: 700; }
   header p { margin: 2px 0 0; font-size: 13px; opacity: 0.85; }
+  .header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .header-menu-btn {
+    flex: 0 0 auto;
+    background: rgba(255,255,255,0.15); border: none; color: #fff;
+    width: 44px; height: 44px; border-radius: 10px; font-size: 19px;
+    display: flex; align-items: center; justify-content: center; font: inherit;
+  }
+  .header-menu-btn:active { background: rgba(255,255,255,0.3); }
 
   main { padding: 12px 16px 0; max-width: 640px; margin: 0 auto; }
 
@@ -62,13 +70,14 @@
 
   .totals-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(74px, 1fr));
     gap: 8px;
   }
-  .totals-grid.secondary { grid-template-columns: repeat(3, 1fr); margin-top: 8px; }
   .stat { text-align: center; }
   .stat .value { font-size: 16px; font-weight: 700; color: var(--accent); }
   .stat .label { font-size: 10.5px; color: var(--text-secondary); margin-top: 2px; }
+  .stat .sub { font-size: 9.5px; color: var(--text-secondary); margin-top: 2px; }
+  .stat .sub.danger { color: var(--danger); font-weight: 600; }
 
   h2 { font-size: 15px; margin: 0 0 10px; }
 
@@ -159,6 +168,9 @@
   .form-body.open { display: flex; }
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   label { font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px; }
+  .field-error { color: var(--danger); font-size: 12.5px; }
+  .check-row { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text); min-height: 44px; margin: 0; }
+  .check-row input { width: 20px; height: 20px; flex: 0 0 auto; }
 
   /* modal */
   .modal-backdrop {
@@ -175,6 +187,30 @@
   }
   .modal h3 { margin: 0 0 4px; font-size: 17px; }
   .modal .modal-sub { font-size: 12.5px; color: var(--text-secondary); margin-bottom: 16px; }
+  .modal-close-btn {
+    background: none; border: none; color: var(--text-secondary); font-size: 18px;
+    width: 44px; height: 44px; flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: center; font: inherit;
+  }
+  .modal.settings-modal { max-height: 85vh; overflow-y: auto; }
+
+  /* onboarding: full-viewport, not-casually-dismissible (no backdrop-click-to-close) */
+  .onboarding-backdrop {
+    position: fixed; inset: 0; background: var(--bg);
+    display: none; align-items: center; justify-content: center; z-index: 300;
+    padding: calc(20px + var(--safe-top)) 16px calc(20px + var(--safe-bottom));
+  }
+  .onboarding-backdrop.open { display: flex; }
+  .onboarding-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    width: 100%; max-width: 420px; border-radius: var(--radius);
+    padding: 22px 18px; max-height: 100%; overflow-y: auto;
+  }
+  .onboarding-skip-btn {
+    display: block; width: 100%; text-align: center;
+    background: none; border: none; color: var(--text-secondary);
+    font-size: 13px; padding: 14px; font: inherit; margin-top: 2px;
+  }
   .qty-row { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 18px; }
   .qty-btn {
     width: 44px; height: 44px; border-radius: 50%;
@@ -300,8 +336,13 @@
 <div class="offline-banner" id="offlineBanner">You're offline — showing saved data.</div>
 
 <header>
-  <h1>Nutrient Tracker</h1>
-  <p id="todayLabel"></p>
+  <div class="header-row">
+    <div>
+      <h1>Nutrient Tracker</h1>
+      <p id="todayLabel"></p>
+    </div>
+    <button class="header-menu-btn" id="settingsBtn" type="button" aria-label="Settings">☰</button>
+  </div>
 </header>
 
 <main>
@@ -310,17 +351,7 @@
 
   <section class="card">
     <h2>Today's totals</h2>
-    <div class="totals-grid">
-      <div class="stat"><div class="value" id="totCalories">0</div><div class="label">kcal</div></div>
-      <div class="stat"><div class="value" id="totProtein">0g</div><div class="label">protein</div></div>
-      <div class="stat"><div class="value" id="totCarbs">0g</div><div class="label">carbs</div></div>
-      <div class="stat"><div class="value" id="totFat">0g</div><div class="label">fat</div></div>
-    </div>
-    <div class="totals-grid secondary">
-      <div class="stat"><div class="value" id="totSugar">0g</div><div class="label">sugar</div></div>
-      <div class="stat"><div class="value" id="totFiber">0g</div><div class="label">fiber</div></div>
-      <div class="stat"><div class="value" id="totSodium">0mg</div><div class="label">sodium</div></div>
-    </div>
+    <div class="totals-grid" id="totalsGrid"></div>
   </section>
 
   <section class="card" id="supplementSummaryCard">
@@ -480,6 +511,40 @@
   </div>
 </div>
 
+<div class="onboarding-backdrop" id="onboardingBackdrop">
+  <div class="onboarding-panel">
+    <h3>Let's personalize your goals</h3>
+    <p class="modal-sub">A few details so we can calculate calorie and nutrient targets for you.</p>
+    <div id="onboardingFormMount"></div>
+    <button class="primary" id="onboardingSubmitBtn" style="margin-top:6px;">Get started</button>
+    <button class="onboarding-skip-btn" id="onboardingSkipBtn" type="button">Skip for now</button>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="settingsBackdrop">
+  <div class="modal settings-modal">
+    <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+      <h3>Settings</h3>
+      <button class="modal-close-btn" id="settingsCloseBtn" type="button" aria-label="Close">✕</button>
+    </div>
+
+    <h2 style="margin-top:6px;">Profile</h2>
+    <div id="settingsProfileFormMount" style="display:flex; flex-direction:column; gap:10px;"></div>
+    <button class="primary" id="settingsSaveProfileBtn" style="margin-top:10px;">Save &amp; recalculate</button>
+
+    <div style="height:1px; background:var(--border); margin:18px 0;"></div>
+
+    <h2>Show on totals card</h2>
+    <div id="settingsDisplayPrefsList" style="display:flex; flex-direction:column; margin-bottom:4px;"></div>
+
+    <div style="height:1px; background:var(--border); margin:18px 0;"></div>
+
+    <h2>Goal overrides</h2>
+    <p class="modal-sub" style="margin-top:-6px;">Manually set a target if you'd like something different than the calculated value.</p>
+    <div id="settingsGoalsList" style="display:flex; flex-direction:column; gap:10px;"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -488,6 +553,9 @@
 
   var STORAGE_CUSTOM_FOODS = "nt_customFoods";
   var STORAGE_LOG_ENTRIES = "nt_logEntries";
+  var STORAGE_PROFILE = "nt_profile";
+  var STORAGE_GOALS = "nt_goals";
+  var STORAGE_DISPLAY_PREFS = "nt_displayPrefs";
   var NUTRIENT_KEYS = ["calories", "protein_g", "carbs_g", "fat_g", "sugar_g", "fiber_g", "sodium_mg"];
 
   var state = {
@@ -495,6 +563,9 @@
     customFoods: [],
     vitamins: [],
     logEntries: {},   // { "YYYY-MM-DD": [entry, ...] }
+    profile: null,     // populated at init() via loadProfile()
+    goals: {},         // populated at init() via loadGoals()
+    displayPrefs: {},  // populated at init() via loadDisplayPrefs()
     pendingFood: null,
     historyModalDateKey: null
   };
@@ -532,8 +603,312 @@
     localStorage.setItem(STORAGE_LOG_ENTRIES, JSON.stringify(state.logEntries));
   }
 
+  // Empty/default profile: nothing has been entered yet, onboarding not done.
+  function defaultProfile() {
+    return {
+      weight: null,
+      weightUnit: null,
+      height: null,
+      heightUnit: null,
+      age: null,
+      sex: null,
+      activityLevel: null,
+      goalType: null,
+      onboarded: false
+    };
+  }
+  function loadProfile() {
+    try {
+      var raw = localStorage.getItem(STORAGE_PROFILE);
+      return raw ? JSON.parse(raw) : defaultProfile();
+    } catch (e) { return defaultProfile(); }
+  }
+  function saveProfile() {
+    localStorage.setItem(STORAGE_PROFILE, JSON.stringify(state.profile));
+  }
+
+  // Empty/default goals: no goals until onboarding (or recalculateGoals()) runs.
+  function loadGoals() {
+    try {
+      var raw = localStorage.getItem(STORAGE_GOALS);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) { return {}; }
+  }
+  function saveGoals() {
+    localStorage.setItem(STORAGE_GOALS, JSON.stringify(state.goals));
+  }
+
+  // Default display prefs: all 7 core nutrient tiles visible until the user
+  // hides one via a future settings screen.
+  function defaultDisplayPrefs() {
+    var prefs = {};
+    NUTRIENT_KEYS.forEach(function (k) { prefs[k] = true; });
+    return prefs;
+  }
+  function loadDisplayPrefs() {
+    try {
+      var raw = localStorage.getItem(STORAGE_DISPLAY_PREFS);
+      return raw ? JSON.parse(raw) : defaultDisplayPrefs();
+    } catch (e) { return defaultDisplayPrefs(); }
+  }
+  function saveDisplayPrefs() {
+    localStorage.setItem(STORAGE_DISPLAY_PREFS, JSON.stringify(state.displayPrefs));
+  }
+
   function allFoods() {
     return state.preloadedFoods.concat(state.customFoods);
+  }
+
+  // ---------- profile / goals ----------
+  // Unit conversion constants (exact standard conversion factors).
+  var LB_TO_KG = 0.453592;
+  var IN_TO_CM = 2.54;
+
+  // Activity multipliers (PAL, physical activity level) commonly paired with
+  // Mifflin-St Jeor BMR to estimate TDEE -- this pairing is the standard used
+  // by most consumer nutrition trackers.
+  var ACTIVITY_MULTIPLIERS = {
+    sedentary: 1.2,
+    light: 1.375,
+    moderate: 1.55,
+    active: 1.725,
+    very_active: 1.9
+  };
+
+  // kcal/day adjustment applied to TDEE to reach a calorie goal. -500 kcal/day
+  // is the standard estimate for ~1 lb/week fat loss (3500 kcal ~= 1 lb fat).
+  // +300 kcal/day is a conservative lean-gain surplus.
+  var CALORIE_ADJUSTMENT = { lose: -500, maintain: 0, gain: 300 };
+
+  // Minimum-safe-intake floors: widely cited consumer guidance (e.g. NIH /
+  // Mayo Clinic) that adults generally should not eat below 1500 kcal/day
+  // (male) / 1200 kcal/day (female) without medical supervision. This is a
+  // safety clamp applied AFTER the formula, not part of the formula itself.
+  var MIN_SAFE_CALORIES = { male: 1500, female: 1200 };
+
+  // Macro split (% of calorie goal) by goal type: higher protein % while
+  // cutting helps preserve lean mass; higher carb % while gaining fuels
+  // training. protein_g/carbs_g = 4 kcal/g, fat_g = 9 kcal/g (Atwater factors).
+  var MACRO_SPLITS = {
+    lose: { protein: 0.35, carbs: 0.35, fat: 0.30 },
+    maintain: { protein: 0.30, carbs: 0.40, fat: 0.30 },
+    gain: { protein: 0.25, carbs: 0.50, fat: 0.25 }
+  };
+
+  // Dietary Guidelines for Americans fiber recommendation (does not depend
+  // on calorie goal): 38g/day (male), 25g/day (female).
+  var FIBER_TARGET_G = { male: 38, female: 25 };
+
+  // General upper-limit sodium guideline (Dietary Guidelines for Americans /
+  // FDA daily value): flat 2300mg/day regardless of sex/age.
+  var SODIUM_MAX_MG = 2300;
+
+  // Added-sugar guideline (Dietary Guidelines for Americans): <=10% of total
+  // calorie goal, converted to grams at 4 kcal/g.
+  var SUGAR_PCT_OF_CALORIES = 0.10;
+
+  // Fixed display order + labels/units used by getTodayGoalProgress() (and
+  // reusable by any future settings UI that lists the 7 core nutrients).
+  var NUTRIENT_ORDER = ["calories", "protein_g", "carbs_g", "fat_g", "sugar_g", "fiber_g", "sodium_mg"];
+  var NUTRIENT_LABELS = {
+    calories: "Calories", protein_g: "Protein", carbs_g: "Carbs", fat_g: "Fat",
+    sugar_g: "Sugar", fiber_g: "Fiber", sodium_mg: "Sodium"
+  };
+  var NUTRIENT_UNITS = {
+    calories: "kcal", protein_g: "g", carbs_g: "g", fat_g: "g",
+    sugar_g: "g", fiber_g: "g", sodium_mg: "mg"
+  };
+  // Fallback direction per nutrient (mirrors what calculateGoals() assigns),
+  // used when no goal has been calculated yet so getTodayGoalProgress() can
+  // still report a sensible direction alongside goal: null.
+  var NUTRIENT_DIRECTIONS = {
+    calories: "target", protein_g: "target", carbs_g: "target", fat_g: "target",
+    sugar_g: "max", fiber_g: "min", sodium_mg: "max"
+  };
+
+  // Pure function: profile in, goals object out. No reads/writes of state or
+  // localStorage here -- callers (completeOnboarding, recalculateGoals) own
+  // persistence.
+  function calculateGoals(profile) {
+    // 1. Convert to metric internally regardless of stored unit.
+    var weightKg = profile.weightUnit === "lb" ? profile.weight * LB_TO_KG : profile.weight;
+    var heightCm = profile.heightUnit === "in" ? profile.height * IN_TO_CM : profile.height;
+
+    // 2. BMR -- Mifflin-St Jeor equation (Mifflin MD, St Jeor ST, et al.,
+    // "A new predictive equation for resting energy expenditure in healthy
+    // individuals," Am J Clin Nutr, 1990) -- supersedes the older
+    // Harris-Benedict equation for accuracy in healthy adults.
+    var bmr = profile.sex === "male"
+      ? (10 * weightKg + 6.25 * heightCm - 5 * profile.age + 5)
+      : (10 * weightKg + 6.25 * heightCm - 5 * profile.age - 161);
+
+    // 3. TDEE = BMR x activity multiplier.
+    var tdee = bmr * (ACTIVITY_MULTIPLIERS[profile.activityLevel] || ACTIVITY_MULTIPLIERS.sedentary);
+
+    // 4. Calorie goal by goalType, clamped to a minimum-safe-intake floor.
+    var calorieGoal = tdee + (CALORIE_ADJUSTMENT[profile.goalType] || 0);
+    var floor = profile.sex === "male" ? MIN_SAFE_CALORIES.male : MIN_SAFE_CALORIES.female;
+    if (calorieGoal < floor) calorieGoal = floor; // safety clamp, not a formula result
+
+    // 5. Macro split -> grams.
+    var split = MACRO_SPLITS[profile.goalType] || MACRO_SPLITS.maintain;
+    var proteinG = (calorieGoal * split.protein) / 4;
+    var carbsG = (calorieGoal * split.carbs) / 4;
+    var fatG = (calorieGoal * split.fat) / 9;
+
+    // 6/7/8. Fiber (min), sodium (max), sugar (max).
+    var fiberG = profile.sex === "male" ? FIBER_TARGET_G.male : FIBER_TARGET_G.female;
+    var sugarG = (calorieGoal * SUGAR_PCT_OF_CALORIES) / 4;
+
+    // 9. Calories itself is a "target" (aim close to it).
+    return {
+      calories: { target: Math.round(calorieGoal), direction: "target" },
+      protein_g: { target: Math.round(proteinG), direction: "target" },
+      carbs_g: { target: Math.round(carbsG), direction: "target" },
+      fat_g: { target: Math.round(fatG), direction: "target" },
+      sugar_g: { target: Math.round(sugarG), direction: "max" },
+      fiber_g: { target: fiberG, direction: "min" },
+      sodium_mg: { target: SODIUM_MAX_MG, direction: "max" }
+    };
+  }
+
+  // Called by a future onboarding-form UI on submit. profileInput is the raw
+  // form input (same shape as the Profile object, minus "onboarded").
+  function completeOnboarding(profileInput) {
+    var profile = {};
+    Object.keys(profileInput).forEach(function (k) { profile[k] = profileInput[k]; });
+    profile.onboarded = true;
+    state.profile = profile;
+    saveProfile();
+    var goals = calculateGoals(profile);
+    state.goals = goals;
+    saveGoals();
+    return { profile: profile, goals: goals };
+  }
+
+  function isOnboarded() {
+    return !!(state.profile && state.profile.onboarded === true);
+  }
+
+  // For a future settings UI: re-derive goals from the current profile
+  // (e.g. after the user edits weight/age/activity) without redoing full
+  // onboarding.
+  function recalculateGoals() {
+    state.goals = calculateGoals(state.profile);
+    saveGoals();
+    return state.goals;
+  }
+
+  // For a future settings UI: toggle one nutrient's visibility on the totals
+  // card and persist it immediately.
+  function setDisplayPreference(nutrientKey, visible) {
+    state.displayPrefs[nutrientKey] = !!visible;
+    saveDisplayPrefs();
+  }
+
+  // One row per nutrient that's enabled in display prefs, in a fixed order,
+  // for a future totals-card UI to render (progress bar when goal is a
+  // number, plain number when goal is null). "No goal set" (empty goals
+  // object / pre-onboarding) is signaled by goal: null -- callers must
+  // branch on that rather than assuming a number.
+  function getTodayGoalProgress() {
+    var totals = computeTotals(state.logEntries[todayKey()] || []);
+    return NUTRIENT_ORDER.filter(function (key) {
+      // undefined counts as visible, matching the "all 7 true by default"
+      // contract of nt_displayPrefs.
+      return state.displayPrefs[key] !== false;
+    }).map(function (key) {
+      var g = state.goals[key];
+      return {
+        key: key,
+        label: NUTRIENT_LABELS[key],
+        consumed: totals[key],
+        goal: g ? g.target : null,
+        direction: g ? g.direction : NUTRIENT_DIRECTIONS[key],
+        unit: NUTRIENT_UNITS[key]
+      };
+    });
+  }
+
+  // ---------- shared profile form (mounted in both onboarding + settings) ----------
+  // idPrefix keeps element ids unique between the two mount points (e.g. "ob" vs
+  // "set") since both can exist in the DOM at once.
+  function profileFormFieldsHtml(p) {
+    return (
+      '<div class="form-grid">' +
+        '<div><label for="' + p + '_weight">Weight</label><input type="number" id="' + p + '_weight" min="0" step="any" placeholder="e.g. 165" /></div>' +
+        '<div><label for="' + p + '_weightUnit">Unit</label><select id="' + p + '_weightUnit"><option value="lb">lb</option><option value="kg">kg</option></select></div>' +
+      '</div>' +
+      '<div class="form-grid">' +
+        '<div><label for="' + p + '_height">Height</label><input type="number" id="' + p + '_height" min="0" step="any" placeholder="e.g. 68" /></div>' +
+        '<div><label for="' + p + '_heightUnit">Unit</label><select id="' + p + '_heightUnit"><option value="in">in</option><option value="cm">cm</option></select></div>' +
+      '</div>' +
+      '<div class="form-grid">' +
+        '<div><label for="' + p + '_age">Age</label><input type="number" id="' + p + '_age" min="0" step="1" placeholder="e.g. 30" /></div>' +
+        '<div><label for="' + p + '_sex">Sex</label><select id="' + p + '_sex"><option value="male">Male</option><option value="female">Female</option></select></div>' +
+      '</div>' +
+      '<div>' +
+        '<label for="' + p + '_activityLevel">Activity level</label>' +
+        '<select id="' + p + '_activityLevel">' +
+          '<option value="sedentary">Sedentary (little/no exercise)</option>' +
+          '<option value="light">Light (1-3 days/week)</option>' +
+          '<option value="moderate">Moderate (3-5 days/week)</option>' +
+          '<option value="active">Active (6-7 days/week)</option>' +
+          '<option value="very_active">Very active (physical job or 2x/day training)</option>' +
+        '</select>' +
+      '</div>' +
+      '<div>' +
+        '<label for="' + p + '_goalType">Goal</label>' +
+        '<select id="' + p + '_goalType">' +
+          '<option value="lose">Lose weight</option>' +
+          '<option value="maintain">Maintain</option>' +
+          '<option value="gain">Gain muscle</option>' +
+        '</select>' +
+      '</div>' +
+      '<div class="field-error" id="' + p + '_error" style="display:none;"></div>'
+    );
+  }
+
+  function fillProfileForm(p, profile) {
+    profile = profile || {};
+    document.getElementById(p + "_weight").value = profile.weight != null ? profile.weight : "";
+    document.getElementById(p + "_weightUnit").value = profile.weightUnit || "lb";
+    document.getElementById(p + "_height").value = profile.height != null ? profile.height : "";
+    document.getElementById(p + "_heightUnit").value = profile.heightUnit || "in";
+    document.getElementById(p + "_age").value = profile.age != null ? profile.age : "";
+    document.getElementById(p + "_sex").value = profile.sex || "male";
+    document.getElementById(p + "_activityLevel").value = profile.activityLevel || "sedentary";
+    document.getElementById(p + "_goalType").value = profile.goalType || "maintain";
+  }
+
+  // Reads + validates the form. Returns a profile-shaped object (correct
+  // numeric types) ready for completeOnboarding(), or null (and shows an
+  // inline error) if required fields aren't filled in.
+  function readProfileForm(p) {
+    var errorEl = document.getElementById(p + "_error");
+    var weight = Number(document.getElementById(p + "_weight").value);
+    var height = Number(document.getElementById(p + "_height").value);
+    var age = Number(document.getElementById(p + "_age").value);
+    var weightUnit = document.getElementById(p + "_weightUnit").value;
+    var heightUnit = document.getElementById(p + "_heightUnit").value;
+    var sex = document.getElementById(p + "_sex").value;
+    var activityLevel = document.getElementById(p + "_activityLevel").value;
+    var goalType = document.getElementById(p + "_goalType").value;
+
+    if (!weight || weight <= 0 || !height || height <= 0 || !age || age <= 0) {
+      if (errorEl) {
+        errorEl.textContent = "Please fill in weight, height, and age.";
+        errorEl.style.display = "block";
+      }
+      return null;
+    }
+    if (errorEl) errorEl.style.display = "none";
+    return {
+      weight: weight, weightUnit: weightUnit,
+      height: height, heightUnit: heightUnit,
+      age: age, sex: sex,
+      activityLevel: activityLevel, goalType: goalType
+    };
   }
 
   // ---------- vitamins / supplements ----------
@@ -583,15 +958,46 @@
     );
   }
 
+  // One tile per getTodayGoalProgress() row. Calories keeps the original
+  // convention of putting the unit in the label ("kcal") rather than
+  // appended to the number; every other nutrient appends its unit directly
+  // to the number, matching how the pre-goals UI displayed values.
+  function totalsTileHtml(r) {
+    var isCalories = r.unit === "kcal";
+    var unitSuffix = isCalories ? "" : r.unit;
+    var labelText = isCalories ? "kcal" : r.label.toLowerCase();
+    var valueText = r.goal == null
+      ? fmt(r.consumed) + unitSuffix
+      : fmt(r.consumed) + " / " + fmt(r.goal) + unitSuffix;
+
+    var subHtml = "";
+    if (r.goal != null) {
+      var remaining = r.goal - r.consumed;
+      if (r.direction === "max") {
+        subHtml = r.consumed > r.goal
+          ? '<div class="sub danger">' + fmt(r.consumed - r.goal) + unitSuffix + ' over limit</div>'
+          : '<div class="sub">' + fmt(remaining) + unitSuffix + ' left before limit</div>';
+      } else {
+        // "target" (calories/protein/carbs/fat) and "min" (fiber) both read
+        // as "X left" until met, then "Goal reached".
+        subHtml = remaining <= 0
+          ? '<div class="sub">Goal reached</div>'
+          : '<div class="sub">' + fmt(remaining) + unitSuffix + ' left</div>';
+      }
+    }
+
+    return (
+      '<div class="stat">' +
+        '<div class="value">' + valueText + '</div>' +
+        '<div class="label">' + labelText + '</div>' +
+        subHtml +
+      '</div>'
+    );
+  }
+
   function renderTotals() {
-    var totals = computeTotals(state.logEntries[todayKey()] || []);
-    document.getElementById("totCalories").textContent = fmt(totals.calories);
-    document.getElementById("totProtein").textContent = fmt(totals.protein_g) + "g";
-    document.getElementById("totCarbs").textContent = fmt(totals.carbs_g) + "g";
-    document.getElementById("totFat").textContent = fmt(totals.fat_g) + "g";
-    document.getElementById("totSugar").textContent = fmt(totals.sugar_g) + "g";
-    document.getElementById("totFiber").textContent = fmt(totals.fiber_g) + "g";
-    document.getElementById("totSodium").textContent = fmt(totals.sodium_mg) + "mg";
+    var container = document.getElementById("totalsGrid");
+    container.innerHTML = getTodayGoalProgress().map(totalsTileHtml).join("");
   }
 
   function renderEntryRows(container, entries, dateKey) {
@@ -1043,6 +1449,103 @@
     if (cb) cb();
   });
 
+  // ---------- onboarding (first-launch, full-viewport, not casually dismissible) ----------
+  var onboardingBackdrop = document.getElementById("onboardingBackdrop");
+
+  function showOnboarding() {
+    document.getElementById("onboardingFormMount").innerHTML = profileFormFieldsHtml("ob");
+    fillProfileForm("ob", state.profile);
+    onboardingBackdrop.classList.add("open");
+  }
+  function hideOnboarding() {
+    onboardingBackdrop.classList.remove("open");
+  }
+  document.getElementById("onboardingSubmitBtn").addEventListener("click", function () {
+    var values = readProfileForm("ob");
+    if (!values) return;
+    completeOnboarding(values);
+    hideOnboarding();
+    renderAll();
+    showToast("Profile saved");
+  });
+  document.getElementById("onboardingSkipBtn").addEventListener("click", function () {
+    // Deliberately does not call completeOnboarding() -- state.profile.onboarded
+    // stays false so the prompt returns on next launch. No separate "skipped"
+    // flag; this is session-only.
+    hideOnboarding();
+  });
+
+  // ---------- settings panel (hamburger menu: edit profile / display prefs / goal overrides) ----------
+  var settingsBackdrop = document.getElementById("settingsBackdrop");
+
+  function renderDisplayPrefsSettings() {
+    var container = document.getElementById("settingsDisplayPrefsList");
+    container.innerHTML = NUTRIENT_ORDER.map(function (key) {
+      var checked = state.displayPrefs[key] !== false;
+      return (
+        '<label class="check-row">' +
+          '<input type="checkbox" data-key="' + key + '"' + (checked ? " checked" : "") + ' />' +
+          NUTRIENT_LABELS[key] +
+        '</label>'
+      );
+    }).join("");
+    container.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+      cb.addEventListener("change", function () {
+        setDisplayPreference(cb.getAttribute("data-key"), cb.checked);
+        renderTotals();
+      });
+    });
+  }
+
+  function renderGoalOverridesSettings() {
+    var container = document.getElementById("settingsGoalsList");
+    container.innerHTML = NUTRIENT_ORDER.map(function (key) {
+      var g = state.goals[key];
+      var val = g ? g.target : "";
+      var dirNote = g && g.direction === "max" ? " (max)" : g && g.direction === "min" ? " (min)" : "";
+      return (
+        '<div>' +
+          '<label for="goal_' + key + '">' + NUTRIENT_LABELS[key] + dirNote + ' target (' + NUTRIENT_UNITS[key] + ')</label>' +
+          '<input type="number" id="goal_' + key + '" data-key="' + key + '" min="0" step="any" value="' + val + '"' + (g ? "" : " disabled") + ' />' +
+        '</div>'
+      );
+    }).join("");
+    container.querySelectorAll('input[type="number"]').forEach(function (inp) {
+      inp.addEventListener("change", function () {
+        var key = inp.getAttribute("data-key");
+        var val = Number(inp.value);
+        if (!state.goals[key] || isNaN(val) || val < 0) return;
+        state.goals[key].target = val;
+        saveGoals();
+        renderTotals();
+      });
+    });
+  }
+
+  function openSettings() {
+    document.getElementById("settingsProfileFormMount").innerHTML = profileFormFieldsHtml("set");
+    fillProfileForm("set", state.profile);
+    renderDisplayPrefsSettings();
+    renderGoalOverridesSettings();
+    settingsBackdrop.classList.add("open");
+  }
+  function closeSettings() {
+    settingsBackdrop.classList.remove("open");
+  }
+  document.getElementById("settingsBtn").addEventListener("click", openSettings);
+  document.getElementById("settingsCloseBtn").addEventListener("click", closeSettings);
+  settingsBackdrop.addEventListener("click", function (e) {
+    if (e.target === settingsBackdrop) closeSettings();
+  });
+  document.getElementById("settingsSaveProfileBtn").addEventListener("click", function () {
+    var values = readProfileForm("set");
+    if (!values) return;
+    completeOnboarding(values); // full overwrite + goal recompute, correct for edits too
+    renderGoalOverridesSettings(); // goal targets just changed -- refresh the override inputs
+    renderTotals();
+    showToast("Profile updated");
+  });
+
   // ---------- export all data as JSON / weekly macro summary ----------
   function exportAllDataAsJSON() {
     // Field kept as "logEntries" (not "foodLog") so a file exported here can still
@@ -1223,6 +1726,11 @@
     updateOnlineStatus();
     state.customFoods = loadCustomFoods();
     state.logEntries = loadLogEntries();
+    state.profile = loadProfile();
+    state.goals = loadGoals();
+    state.displayPrefs = loadDisplayPrefs();
+
+    if (!isOnboarded()) showOnboarding();
 
     fetch("foods.json")
       .then(function (r) { return r.json(); })
