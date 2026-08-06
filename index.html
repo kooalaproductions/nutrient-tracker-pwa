@@ -337,6 +337,29 @@
     background: #FFF3E0; color: #7A4A00; border: 1px solid #F0DDB8;
     border-radius: 8px; padding: 10px 12px; font-size: 12.5px; margin-bottom: 14px;
   }
+
+  /* micronutrients */
+  .micro-summary-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .micro-badge {
+    display: inline-block; font-size: 10.5px; font-weight: 700;
+    padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+  }
+  .micro-badge.critical { background: var(--danger); color: #fff; }
+  .micro-badge.over-ul { background: var(--danger); color: #fff; }
+  .micro-badge.low { background: #FFF3CD; color: #856404; }
+  .micro-badge.met { background: var(--accent-light); color: var(--accent); }
+  .micro-row { padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .micro-row:last-child { border-bottom: none; }
+  .micro-row-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 13.5px; margin-bottom: 4px; }
+  .micro-name { font-weight: 600; }
+  .micro-amount { color: var(--text-secondary); font-size: 12px; white-space: nowrap; }
+  .micro-percent { font-size: 11px; color: var(--text-secondary); margin-top: 3px; }
+  .micro-row-no-data .micro-name, .micro-row-no-data .micro-amount { color: var(--text-secondary); }
+  /* over_ul gets a simple static accent bar rather than a new @keyframes
+     animation -- no existing @keyframes pattern exists in this file to match,
+     and a static distinct treatment is enough to flag it without adding a
+     new animation primitive for one badge state. */
+  .micro-row-over-ul { box-shadow: inset 3px 0 0 var(--danger); padding-left: 8px; }
 </style>
 </head>
 <body>
@@ -360,6 +383,11 @@
   <section class="card">
     <h2>Today's totals</h2>
     <div class="totals-grid" id="totalsGrid"></div>
+  </section>
+
+  <section class="card" id="microSummaryCard">
+    <h2>🧬 Micronutrients</h2>
+    <div id="microSummaryRow"></div>
   </section>
 
   <section class="card" id="supplementSummaryCard">
@@ -446,6 +474,24 @@
 
   </div>
 
+  <div id="microView" style="display:none">
+
+  <section class="card">
+    <h2>Today's Micronutrients</h2>
+    <p class="food-meta" id="microViewDate" style="margin-top:-6px; margin-bottom:10px;"></p>
+
+    <div class="supplement-cat-header">VITAMINS</div>
+    <div class="supplement-group-list" id="microVitaminsList"></div>
+
+    <div class="supplement-cat-header">MINERALS</div>
+    <div class="supplement-group-list" id="microMineralsList"></div>
+
+    <div class="supplement-cat-header">OTHER</div>
+    <div class="supplement-group-list" id="microOtherList"></div>
+  </section>
+
+  </div>
+
 </main>
 
 <nav class="bottom-nav" id="bottomNav">
@@ -454,6 +500,9 @@
   </button>
   <button class="nav-btn" id="navSupplementsBtn" data-view="supplementsView" type="button">
     <span class="nav-icon">💊</span><span>Supplements</span>
+  </button>
+  <button class="nav-btn" id="navMicroBtn" data-view="microView" type="button">
+    <span class="nav-icon">🧬</span><span>Micros</span>
   </button>
 </nav>
 
@@ -974,12 +1023,14 @@
       .catch(function () {
         state.rdas = {};
         showToast("Couldn't load nutrient targets");
+      })
+      .then(function () {
+        // Same pattern as loadVitamins() -> renderSupplementList(): re-render
+        // the micronutrient summary/detail UI once the fetch resolves (it may
+        // already have been painted once with an empty state.rdas).
+        renderMicroSummary();
+        renderMicroView();
       });
-    // Unlike loadVitamins() -> renderSupplementList(), there's no re-render
-    // call chained here: no micronutrient UI exists yet in this file (that's
-    // a separate UI task building screens against getMicronutrientStatus()
-    // etc. below). Once that UI exists, chain a re-render call here the same
-    // way loadVitamins() does.
   }
 
   // Reads state.profile.age/state.profile.sex and state.rdas[nutrientKey].
@@ -1431,6 +1482,140 @@
     });
   }
 
+  // ---------- micronutrient view (Micros tab + totals-card summary row) ----------
+  // Same vitamin/mineral split as the brief: vitamin* keys plus the B-vitamin
+  // aliases that don't start with "vitamin" (biotin, choline, folate, niacin,
+  // pantothenic acid, riboflavin, thiamin). Omega-3 and cholesterol have no
+  // established RDA in rdas.json (see getUserRDA()'s comment above) so they
+  // get their own small "OTHER" section instead of forcing them into MINERALS.
+  var MICRO_VITAMIN_KEYS = [
+    "vitamina_mcg", "thiamin_mg", "riboflavin_mg", "niacin_mg", "pantothenicacid_mg",
+    "vitaminb6_mg", "biotin_mcg", "folate_mcg", "vitaminb12_mcg", "vitaminc_mg",
+    "choline_mg", "vitamind_mcg", "vitamine_mg", "vitamink_mcg"
+  ];
+  var MICRO_OTHER_KEYS = ["omega3_mg", "cholesterol_mg"];
+  var MICRO_MINERAL_KEYS = MICRONUTRIENT_KEYS.filter(function (k) {
+    return MICRO_VITAMIN_KEYS.indexOf(k) === -1 && MICRO_OTHER_KEYS.indexOf(k) === -1;
+  });
+
+  function renderMicroSummary() {
+    var container = document.getElementById("microSummaryRow");
+    if (!container) return;
+    var s = getMicronutrientSummaryForCard();
+    var total = s.criticalCount + s.lowCount + s.metCount + s.overULCount;
+    if (total === 0) {
+      container.innerHTML = '<div class="empty">🧬 Log foods to see micronutrient data</div>';
+      return;
+    }
+    var badges = "";
+    if (s.overULCount > 0) badges += '<span class="micro-badge over-ul">' + s.overULCount + ' over limit</span>';
+    if (s.criticalCount > 0) badges += '<span class="micro-badge critical">' + s.criticalCount + ' critical</span>';
+    if (s.lowCount > 0) badges += '<span class="micro-badge low">' + s.lowCount + ' low</span>';
+    if (s.metCount > 0) badges += '<span class="micro-badge met">' + s.metCount + ' met</span>';
+    container.innerHTML =
+      '<div class="toggle-row" id="microSummaryBtn">' +
+        '<span class="micro-summary-badges">' + badges + '</span>' +
+        '<span class="chevron">→</span>' +
+      '</div>';
+    document.getElementById("microSummaryBtn").addEventListener("click", function () { switchView("microView"); });
+  }
+
+  // Bar/text color per status bucket -- over_ul reuses --danger for the bar
+  // itself (same as critical) and additionally gets the .micro-row-over-ul
+  // accent-bar treatment from CSS for a visually distinct look.
+  var MICRO_STATUS_COLORS = {
+    critical: "var(--danger)",
+    low: "#FFC107",
+    approaching: "#74C69D",
+    met: "var(--accent)",
+    approaching_ul: "#FF9800",
+    over_ul: "var(--danger)"
+  };
+
+  // Row for a nutrient present in today's getMicronutrientStatus() results.
+  // rda/percentOfRDA are null for Omega-3 and Cholesterol (no established
+  // RDA) -- shown as a plain consumed amount with no bar/percent rather than
+  // "null%"/"NaN%".
+  function microRowHtml(row) {
+    var aiHtml = row.aiOnly ? ' <span class="custom-tag">AI</span>' : '';
+    var barHtml = "";
+    var pctHtml = "";
+    var amountText;
+    if (row.rda == null) {
+      amountText = fmt(row.consumed) + " " + row.unit + " · no daily target";
+    } else {
+      amountText = fmt(row.consumed) + " / " + fmt(row.rda) + " " + row.unit;
+      var barColor = MICRO_STATUS_COLORS[row.status] || "var(--accent)";
+      var pct = Math.min(100, row.percentOfRDA || 0);
+      barHtml = '<div class="stat-bar-track"><div class="stat-bar-fill" style="width:' + pct + '%; background:' + barColor + ';"></div></div>';
+      pctHtml = '<div class="micro-percent">' + row.percentOfRDA + '%</div>';
+    }
+    var rowClass = "micro-row" + (row.status === "over_ul" ? " micro-row-over-ul" : "");
+    return (
+      '<div class="' + rowClass + '">' +
+        '<div class="micro-row-top">' +
+          '<span class="micro-name">' + escapeHtml(row.displayName) + aiHtml + '</span>' +
+          '<span class="micro-amount">' + amountText + '</span>' +
+        '</div>' +
+        barHtml +
+        pctHtml +
+      '</div>'
+    );
+  }
+
+  // Row for a nutrient with an rdas.json entry but nothing logged today --
+  // greyed out via .micro-row-no-data, no bar (nothing to show progress on).
+  function microNoDataRowHtml(key) {
+    var meta = state.rdas[key];
+    return (
+      '<div class="micro-row micro-row-no-data">' +
+        '<div class="micro-row-top">' +
+          '<span class="micro-name">' + escapeHtml(meta.displayName) + '</span>' +
+          '<span class="micro-amount">Not logged today</span>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  // Builds one section's HTML: rows for keys with today's data (sorted by the
+  // same status priority as getMicronutrientStatus()), then greyed-out rows
+  // for keys with an rdas.json entry but no data logged today. Handles
+  // state.rdas still being {} (pre-fetch) and rows being [] (nothing logged
+  // today) gracefully -- both just fall through to the empty-state fallback.
+  function microSectionHtml(keys, rowsByKey) {
+    var found = keys.filter(function (k) { return rowsByKey[k]; }).map(function (k) { return rowsByKey[k]; });
+    found.sort(function (a, b) {
+      return MICRONUTRIENT_STATUS_ORDER.indexOf(a.status) - MICRONUTRIENT_STATUS_ORDER.indexOf(b.status);
+    });
+    var noData = keys.filter(function (k) { return !rowsByKey[k] && state.rdas[k]; });
+    var html = found.map(microRowHtml).join("") + noData.map(microNoDataRowHtml).join("");
+    return html || '<div class="empty">No data yet.</div>';
+  }
+
+  function renderMicroView() {
+    var dateEl = document.getElementById("microViewDate");
+    if (!dateEl) return;
+    dateEl.textContent = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+
+    var rows = getMicronutrientStatus(todayKey());
+    var rowsByKey = {};
+    rows.forEach(function (r) { rowsByKey[r.key] = r; });
+
+    document.getElementById("microVitaminsList").innerHTML = microSectionHtml(MICRO_VITAMIN_KEYS, rowsByKey);
+    document.getElementById("microMineralsList").innerHTML = microSectionHtml(MICRO_MINERAL_KEYS, rowsByKey);
+    document.getElementById("microOtherList").innerHTML = microSectionHtml(MICRO_OTHER_KEYS, rowsByKey);
+  }
+
+  // Called from the food/supplement log success paths only (not from
+  // renderAll()/general re-renders) so the warning fires once right after
+  // the log action that caused it, instead of on every navigation/render.
+  function maybeWarnUpperLimit() {
+    var rows = getMicronutrientStatus(todayKey());
+    if (rows.length && rows[0].status === "over_ul") {
+      showToast("⚠️ You've reached the " + rows[0].displayName + " upper limit for today");
+    }
+  }
+
   function renderAll() {
     renderTotals();
     renderLogList();
@@ -1439,6 +1624,8 @@
     renderRecentDays();
     renderSupplementList();
     renderSupplementSummary();
+    renderMicroSummary();
+    renderMicroView();
   }
 
   // ---------- log actions ----------
@@ -1451,13 +1638,21 @@
     if (!state.logEntries[key]) state.logEntries[key] = [];
     var entry = { id: uid(), foodId: food.id, name: food.name, brand: food.brand || "", servingSize: food.servingSize, servingUnit: food.servingUnit, multiplier: multiplier };
     NUTRIENT_KEYS.forEach(function (k) { entry[k] = Number(food[k]) || 0; });
+    // Only copy micronutrient fields the food item actually has data for --
+    // getDailyMicronutrientTotals() treats a missing key as "not tracked",
+    // so defaulting absent fields to 0 here would wrongly mark every food as
+    // a (zero) source for every nutrient instead of leaving it sparse.
+    MICRONUTRIENT_KEYS.forEach(function (k) { if (food[k] != null) entry[k] = Number(food[k]); });
     state.logEntries[key].push(entry);
     saveLogEntries();
     renderTotals();
     renderLogList();
     renderCalendar();
     renderRecentDays();
+    renderMicroSummary();
+    renderMicroView();
     showToast("Logged " + food.name);
+    maybeWarnUpperLimit();
   }
 
   function removeLogEntry(dateKey, id) {
@@ -1474,6 +1669,8 @@
     renderCalendar();
     renderRecentDays();
     renderSupplementSummary();
+    renderMicroSummary();
+    renderMicroView();
     if (historyModalBackdrop.classList.contains("open") && state.historyModalDateKey === dateKey) {
       openHistoryModal(dateKey);
     }
@@ -1510,7 +1707,14 @@
     renderLogList();
     renderCalendar();
     renderRecentDays();
+    // Supplements don't carry a nutrientKey mapping yet (see
+    // getDailyMicronutrientTotals()'s comment), so this is a harmless no-op
+    // today -- kept here for consistency with addLogEntry() and to be
+    // correct automatically once that mapping exists.
+    renderMicroSummary();
+    renderMicroView();
     showToast("Logged " + entry.itemName);
+    maybeWarnUpperLimit();
     return entry;
   }
 
@@ -1619,10 +1823,15 @@
     var note = document.getElementById("supplementNoteInput").value.trim();
     var entry = logSupplement(pendingSupplement.id, dose, pendingSupplement.doseUnit, note);
     closeSupplementModal();
-    // logSupplement already re-renders totals/log list/calendar/recent days;
-    // the supplements summary chip row is new UI it doesn't know about.
+    // logSupplement already re-renders totals/log list/calendar/recent days
+    // (and the micronutrient summary/detail views); the supplements summary
+    // chip row is new UI it doesn't know about.
     renderSupplementSummary();
     showToast("💊 " + entry.itemName + " logged");
+    // This showToast() call overwrites whatever logSupplement() already put
+    // in the toast (including a possible UL warning), so re-check here too --
+    // matches addLogEntry()'s "warn right after the log action" contract.
+    maybeWarnUpperLimit();
   });
 
   // ---------- calendar / history ----------
@@ -2029,9 +2238,11 @@
   function switchView(viewId) {
     document.getElementById("logView").style.display = viewId === "logView" ? "" : "none";
     document.getElementById("supplementsView").style.display = viewId === "supplementsView" ? "" : "none";
+    document.getElementById("microView").style.display = viewId === "microView" ? "" : "none";
     navButtons.forEach(function (btn) {
       btn.classList.toggle("active", btn.getAttribute("data-view") === viewId);
     });
+    if (viewId === "microView") renderMicroView();
   }
   navButtons.forEach(function (btn) {
     btn.addEventListener("click", function () { switchView(btn.getAttribute("data-view")); });

@@ -24,5 +24,18 @@
     "fixedBy": "bug-fixer",
     "fixedDate": "2026-08-05",
     "fixNotes": "Added a 'category' field to all 20 generic-set foods.json entries (chicken-breast, brown-rice, egg, greek-yogurt, banana, apple, almonds, peanut-butter, oatmeal, salmon, broccoli, sweet-potato, whole-milk, white-bread, avocado, ground-beef, black-beans, cheddar-cheese, spinach, orange-juice), assigning values consistent with how the existing 48 branded items use the enum (e.g. fat-dominant items like almonds/avocado/peanut-butter categorized 'fat' like the Kirkland nut butters and oils, legumes categorized 'vegetable' like kirkland-frozen-edamame)."
+  },
+  {
+    "id": "bug_003",
+    "date": "2026-08-05",
+    "severity": "critical",
+    "status": "fixed",
+    "area": "logic",
+    "title": "addLogEntry() never snapshots micronutrient fields onto log entries",
+    "description": "During integration testing of the new micronutrient tracking feature (getDailyMicronutrientTotals/getMicronutrientStatus, index.html ~line 1060-1162, reading MICRONUTRIENT_KEYS off each food log entry), discovered that addLogEntry() (~line 1636-1648, pre-existing, unmodified by the feature work) only copies the 7 core NUTRIENT_KEYS (calories, protein_g, carbs_g, fat_g, sugar_g, fiber_g, sodium_mg) from the source food item onto the new log entry -- it never copies any of the 30 MICRONUTRIENT_KEYS fields (vitaminc_mg, iron_mg, omega3_mg, etc.). Since getDailyMicronutrientTotals() reads these fields directly off each day's log entries (not by re-looking-up the original food item), every micronutrient except sodium_mg (which happens to double as both a core NUTRIENT_KEY and a tracked micronutrient) silently totaled to zero/absent for every logged food, regardless of how much real data that food item actually had in foods.json. Caught by live testing: logged Kirkland Smoked Salmon (omega3_mg: 1000 in foods.json) and it showed 'Not logged today' in the micronutrient detail view, while Sodium correctly showed real totals from the same entries.",
+    "foundBy": "claude (live integration testing after log-engine/ui-builder both reported success)",
+    "fixedBy": "claude",
+    "fixedDate": "2026-08-05",
+    "fixNotes": "addLogEntry() now also copies any MICRONUTRIENT_KEYS field the source food item actually has data for onto the log entry (food[k] != null check, matching the sparse-field convention getDailyMicronutrientTotals() already expects -- fields the food doesn't track are left absent, not defaulted to 0). Verified live: freshly logging Kirkland Avocado Oil after the fix correctly showed Vitamin E 1.8/15mg (12%) in the micronutrient detail view."
   }
 ]
