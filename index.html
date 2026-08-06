@@ -1021,19 +1021,21 @@
       row.className = "log-entry";
       if (e.type === "supplement") {
         var doseLabel = fmt(e.dose) + " " + (e.doseUnit || "");
+        var brandHtml = e.brand ? escapeHtml(e.brand) + ' · ' : '';
         var noteHtml = e.userNote ? " · " + escapeHtml(e.userNote) : "";
         row.innerHTML =
           '<div class="log-entry-info">' +
             '<div class="log-entry-name">💊 ' + escapeHtml(e.itemName || "Supplement") + '</div>' +
-            '<div class="log-entry-meta">' + escapeHtml(doseLabel) + ' · Supplement' + noteHtml + '</div>' +
+            '<div class="log-entry-meta">' + brandHtml + escapeHtml(doseLabel) + ' · Supplement' + noteHtml + '</div>' +
           '</div>' +
           '<button class="remove-btn" data-id="' + e.id + '">Remove</button>';
       } else {
         var qtyLabel = fmt(e.servingSize * e.multiplier) + " " + e.servingUnit;
+        var foodBrandHtml = e.brand ? escapeHtml(e.brand) + ' · ' : '';
         row.innerHTML =
           '<div class="log-entry-info">' +
             '<div class="log-entry-name">' + escapeHtml(e.name) + '</div>' +
-            '<div class="log-entry-meta">' + qtyLabel + ' · ' + fmt(e.calories * e.multiplier) + ' kcal</div>' +
+            '<div class="log-entry-meta">' + foodBrandHtml + qtyLabel + ' · ' + fmt(e.calories * e.multiplier) + ' kcal</div>' +
           '</div>' +
           '<button class="remove-btn" data-id="' + e.id + '">Remove</button>';
       }
@@ -1067,10 +1069,11 @@
     foods.forEach(function (f) {
       var btn = document.createElement("button");
       btn.className = "food-row";
+      var brandPrefix = f.brand ? escapeHtml(f.brand) + ' · ' : '';
       btn.innerHTML =
         '<span>' +
           '<span class="food-name">' + escapeHtml(f.name) + (f.custom ? '<span class="custom-tag">custom</span>' : '') + '</span>' +
-          '<div class="food-meta">' + fmt(f.servingSize) + ' ' + escapeHtml(f.servingUnit) + '</div>' +
+          '<div class="food-meta">' + brandPrefix + fmt(f.servingSize) + ' ' + escapeHtml(f.servingUnit) + '</div>' +
         '</span>' +
         '<span class="food-cal">' + fmt(f.calories) + ' kcal</span>';
       btn.addEventListener("click", function () { openLogModal(f); });
@@ -1166,7 +1169,7 @@
   function addLogEntry(food, multiplier) {
     var key = todayKey();
     if (!state.logEntries[key]) state.logEntries[key] = [];
-    var entry = { id: uid(), foodId: food.id, name: food.name, servingSize: food.servingSize, servingUnit: food.servingUnit, multiplier: multiplier };
+    var entry = { id: uid(), foodId: food.id, name: food.name, brand: food.brand || "", servingSize: food.servingSize, servingUnit: food.servingUnit, multiplier: multiplier };
     NUTRIENT_KEYS.forEach(function (k) { entry[k] = Number(food[k]) || 0; });
     state.logEntries[key].push(entry);
     saveLogEntries();
@@ -1215,6 +1218,7 @@
       type: "supplement",
       itemId: vitaminId,
       itemName: vitamin ? vitamin.name : vitaminId,
+      brand: vitamin ? (vitamin.brand || "") : "",
       dose: dose,
       doseUnit: doseUnit || (vitamin ? vitamin.doseUnit : ""),
       notes: vitamin ? (vitamin.notes || "") : "",
