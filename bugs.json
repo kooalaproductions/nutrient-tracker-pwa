@@ -3,14 +3,14 @@
     "id": "bug_001",
     "date": "2026-08-05",
     "severity": "warning",
-    "status": "open",
+    "status": "fixed",
     "area": "persistence",
     "title": "Backup export/import omits profile, goals, and display prefs",
     "description": "exportAllDataAsJSON() (index.html, function starting ~line 1562) only writes state.logEntries and state.customFoods into the backup payload. It does not include state.profile, state.goals, or state.displayPrefs, even though these are all persisted separately in localStorage (STORAGE_PROFILE = \"nt_profile\", STORAGE_GOALS = \"nt_goals\", STORAGE_DISPLAY_PREFS = \"nt_displayPrefs\", declared at lines 556-558) and represent real user-facing features: the onboarding profile (weight/height/age/sex/activity/goal used by calculateGoals()) and the Settings screen's per-nutrient goal overrides and 'show on totals card' display toggles. The matching import handler (the importFile 'change' listener, ~line 1622) only reads data.logEntries and data.customFoods back out, so it can't restore these fields even if they were present. A code comment directly above exportAllDataAsJSON() (~line 1567-1569) says 'there's no settings-backed state anywhere in this app yet (only nt_customFoods and nt_logEntries exist in localStorage)' -- this is now stale/incorrect since nt_profile, nt_goals, and nt_displayPrefs were added in a later feature pass and the export/import code was never updated to match. Net effect: a user who downloads a backup and restores it on a new device (or after clearing site data) silently loses their onboarding profile and any custom goal/display-preference customizations, while food log and custom foods survive intact.",
     "foundBy": "qa-reviewer",
-    "fixedBy": null,
-    "fixedDate": null,
-    "fixNotes": null
+    "fixedBy": "bug-fixer",
+    "fixedDate": "2026-08-05",
+    "fixNotes": "exportAllDataAsJSON() now emits a v2.0 payload including profile, goals, and displayPrefs (nested log.logEntries/log.customFoods, top-level preferences) alongside the food log, the stale settings-backed-state comment was removed, and the importFile change handler now detects v2.0 vs. legacy flat v1.0 backups and restores profile/goals/preferences (when present) via saveProfile()/saveGoals()/saveDisplayPrefs() in addition to the existing customFoods/logEntries restore."
   },
   {
     "id": "bug_002",

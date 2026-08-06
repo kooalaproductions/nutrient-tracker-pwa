@@ -1560,19 +1560,19 @@
 
   // ---------- export all data as JSON / weekly macro summary ----------
   function exportAllDataAsJSON() {
-    // Field kept as "logEntries" (not "foodLog") so a file exported here can still
-    // be restored by the existing importFile handler below, which only reads
-    // data.logEntries. "version" and "settings" are purely additive fields the
-    // import handler ignores, so they don't break the round-trip either.
-    // settings is {} -- there's no settings-backed state anywhere in this app yet
-    // (only nt_customFoods and nt_logEntries exist in localStorage), so there's
-    // nothing real to populate it with.
+    // v2.0 payload: nests food-log state under "log" and adds the
+    // settings-backed state that lives in localStorage alongside it --
+    // profile (nt_profile), goals (nt_goals), and display prefs
+    // (nt_displayPrefs) -- so a restored backup carries the full app state,
+    // not just the food log. The importFile handler below understands both
+    // this shape and the older flat v1.0 shape for backward compatibility.
     var payload = {
       exportedAt: new Date().toISOString(),
-      version: "1.0",
-      logEntries: state.logEntries,
-      customFoods: state.customFoods,
-      settings: {}
+      version: "2.0",
+      profile: state.profile,
+      goals: state.goals,
+      log: { logEntries: state.logEntries, customFoods: state.customFoods },
+      preferences: state.displayPrefs
     };
     var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     var url = URL.createObjectURL(blob);
@@ -1632,18 +1632,44 @@
         showToast("That file isn't a valid backup");
         return;
       }
-      if (!data || typeof data !== "object" || typeof data.logEntries !== "object") {
+      // v2.0 backups nest the food log under data.log; v1.0 backups (and any
+      // backup file a user already downloaded before this format changed)
+      // have logEntries/customFoods flat on the root instead, with no
+      // "version" field at all. Detect which shape we got so restoring an
+      // old backup doesn't silently fail once the export format moves on.
+      var isV2 = data && typeof data === "object" && data.version === "2.0" && data.log && typeof data.log === "object";
+      var logSource = isV2 ? data.log : data;
+      if (!data || typeof data !== "object" || typeof logSource.logEntries !== "object") {
         showToast("That file isn't a valid backup");
         return;
       }
       showConfirm(
         "Restore this backup?",
-        "This replaces all food logs and custom foods currently on this device with the contents of the backup file. This can't be undone.",
+        "This replaces all food logs, custom foods, profile, goals, and display preferences currently on this device with the contents of the backup file. This can't be undone.",
         function () {
-          state.customFoods = Array.isArray(data.customFoods) ? data.customFoods : [];
-          state.logEntries = data.logEntries && typeof data.logEntries === "object" ? data.logEntries : {};
+          state.customFoods = Array.isArray(logSource.customFoods) ? logSource.customFoods : [];
+          state.logEntries = logSource.logEntries && typeof logSource.logEntries === "object" ? logSource.logEntries : {};
           saveCustomFoods();
           saveLogEntries();
+
+          // profile/goals/preferences only exist in v2.0 backups -- an older
+          // v1.0 file has none of these, so leave whatever is already on
+          // this device untouched rather than clobbering it with nothing.
+          if (isV2) {
+            if (data.profile && typeof data.profile === "object") {
+              state.profile = data.profile;
+              saveProfile();
+            }
+            if (data.goals && typeof data.goals === "object") {
+              state.goals = data.goals;
+              saveGoals();
+            }
+            if (data.preferences && typeof data.preferences === "object") {
+              state.displayPrefs = data.preferences;
+              saveDisplayPrefs();
+            }
+          }
+
           renderAll();
           showToast("Backup restored");
         }
