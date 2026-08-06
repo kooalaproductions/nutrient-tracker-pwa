@@ -16,13 +16,13 @@
     "id": "bug_002",
     "date": "2026-08-05",
     "severity": "warning",
-    "status": "open",
+    "status": "fixed",
     "area": "data",
     "title": "foods.json: 20 items missing required 'category' field",
     "description": "The first 20 entries in foods.json (the original generic food set, ids: chicken-breast, brown-rice, egg, greek-yogurt, banana, apple, almonds, peanut-butter, oatmeal, salmon, broccoli, sweet-potato, whole-milk, white-bread, avocado, ground-beef, black-beans, cheddar-cheese, spinach, orange-juice) have no 'category' field, while all 48 items added afterward (the Kirkland/branded set, ids starting at 'kirkland-smoked-salmon' onward) do include one (e.g. \"category\": \"protein\", \"fruit\", \"beverage\", etc). This is schema drift introduced when the food list grew from 20 to 68 items across several separate additions -- the newer entries adopted a field the original set never had. Currently low-impact since index.html's JS never reads a food item's .category (renderFoodList() only uses f.name, f.brand, f.servingSize, f.servingUnit, f.calories, f.custom -- grep confirms the only '.category' usage in the whole file is for vitamins.json grouping, not foods.json), so nothing breaks today. But it violates the qa-reviewer data-integrity checklist requirement that every food item have an id/name/category/calories/macros, and any future feature that groups or filters the food list by category (a natural extension given vitamins.json already supports it) would silently misbehave for these 20 items.",
     "foundBy": "qa-reviewer",
-    "fixedBy": null,
-    "fixedDate": null,
-    "fixNotes": null
+    "fixedBy": "bug-fixer",
+    "fixedDate": "2026-08-05",
+    "fixNotes": "Added a 'category' field to all 20 generic-set foods.json entries (chicken-breast, brown-rice, egg, greek-yogurt, banana, apple, almonds, peanut-butter, oatmeal, salmon, broccoli, sweet-potato, whole-milk, white-bread, avocado, ground-beef, black-beans, cheddar-cheese, spinach, orange-juice), assigning values consistent with how the existing 48 branded items use the enum (e.g. fat-dominant items like almonds/avocado/peanut-butter categorized 'fat' like the Kirkland nut butters and oils, legumes categorized 'vegetable' like kirkland-frozen-edamame)."
   }
 ]

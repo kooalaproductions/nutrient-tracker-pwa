@@ -11,7 +11,8 @@
     "sugar_g": 0,
     "fiber_g": 0,
     "sodium_mg": 74,
-    "brand": "Generic"
+    "brand": "Generic",
+    "category": "protein"
   },
   {
     "id": "brown-rice",
@@ -25,7 +26,8 @@
     "sugar_g": 0.7,
     "fiber_g": 3.5,
     "sodium_mg": 10,
-    "brand": "Generic"
+    "brand": "Generic",
+    "category": "grain"
   },
   {
     "id": "egg",
@@ -39,7 +41,8 @@
     "sugar_g": 0.2,
     "fiber_g": 0,
     "sodium_mg": 71,
-    "brand": "Generic"
+    "brand": "Generic",
+    "category": "protein"
   },
   {
     "id": "greek-yogurt",
@@ -53,7 +56,8 @@
     "sugar_g": 4,
     "fiber_g": 0,
     "sodium_mg": 61,
-    "brand": "Generic"
+    "brand": "Generic",
+    "category": "dairy"
   },
   {
     "id": "banana",
@@ -67,7 +71,8 @@
     "sugar_g": 14,
     "fiber_g": 3.1,
     "sodium_mg": 1,
-    "brand": "Generic"
+    "brand": "Generic",
+    "category": "fruit"
   },
   {
     "id": "apple",
@@ -81,7 +86,8 @@
     "sugar_g": 19,
     "fiber_g": 4.4,
     "sodium_mg": 2,
-    "brand": "Generic"
+    "brand": "Generic",
+    "category": "fruit"
   },
   {
     "id": "almonds",
@@ -95,7 +101,8 @@
     "sugar_g": 1.2,
     "fiber_g": 3.5,
     "sodium_mg": 1,
-    "brand": "Generic"
+    "brand": "Generic",
+    "category": "fat"
   },
   {
     "id": "peanut-butter",
@@ -109,7 +116,8 @@
     "sugar_g": 3,
     "fiber_g": 2,
     "sodium_mg": 150,
-    "brand": "Generic"
+    "brand": "Generic",
+    "category": "fat"
   },
   {
     "id": "oatmeal",
@@ -123,7 +131,8 @@
     "sugar_g": 1.1,
     "fiber_g": 4,
     "sodium_mg": 9,
-    "brand": "Generic"
+    "brand": "Generic",
+    "category": "grain"
   },
   {
     "id": "salmon",
@@ -137,7 +146,8 @@
     "sugar_g": 0,
     "fiber_g": 0,
     "sodium_mg": 59,
-    "brand": "Generic"
+    "brand": "Generic",
+    "category": "protein"
   },
   {
     "id": "broccoli",
@@ -151,7 +161,8 @@
     "sugar_g": 2.2,
     "fiber_g": 5.1,
     "sodium_mg": 33,
-    "brand": "Generic"
+    "brand": "Generic",
+    "category": "vegetable"
   },
   {
     "id": "sweet-potato",
@@ -165,7 +176,8 @@
     "sugar_g": 7.4,
     "fiber_g": 3.8,
     "sodium_mg": 41,
-    "brand": "Generic"
+    "brand": "Generic",
+    "category": "vegetable"
   },
   {
     "id": "whole-milk",
@@ -179,7 +191,8 @@
     "sugar_g": 12,
     "fiber_g": 0,
     "sodium_mg": 105,
-    "brand": "Generic"
+    "brand": "Generic",
+    "category": "dairy"
   },
   {
     "id": "white-bread",
@@ -193,7 +206,8 @@
     "sugar_g": 1.5,
     "fiber_g": 0.8,
     "sodium_mg": 152,
-    "brand": "Generic"
+    "brand": "Generic",
+    "category": "grain"
   },
   {
     "id": "avocado",
@@ -207,7 +221,8 @@
     "sugar_g": 0.4,
     "fiber_g": 5,
     "sodium_mg": 5,
-    "brand": "Generic"
+    "brand": "Generic",
+    "category": "fat"
   },
   {
     "id": "ground-beef",
@@ -221,7 +236,8 @@
     "sugar_g": 0,
     "fiber_g": 0,
     "sodium_mg": 75,
-    "brand": "Generic"
+    "brand": "Generic",
+    "category": "protein"
   },
   {
     "id": "black-beans",
@@ -235,7 +251,8 @@
     "sugar_g": 0.6,
     "fiber_g": 15,
     "sodium_mg": 2,
-    "brand": "Generic"
+    "brand": "Generic",
+    "category": "vegetable"
   },
   {
     "id": "cheddar-cheese",
@@ -249,7 +266,8 @@
     "sugar_g": 0.1,
     "fiber_g": 0,
     "sodium_mg": 174,
-    "brand": "Generic"
+    "brand": "Generic",
+    "category": "dairy"
   },
   {
     "id": "spinach",
@@ -263,7 +281,8 @@
     "sugar_g": 0.3,
     "fiber_g": 1.4,
     "sodium_mg": 48,
-    "brand": "Generic"
+    "brand": "Generic",
+    "category": "vegetable"
   },
   {
     "id": "orange-juice",
@@ -277,7 +296,8 @@
     "sugar_g": 21,
     "fiber_g": 0.5,
     "sodium_mg": 2,
-    "brand": "Generic"
+    "brand": "Generic",
+    "category": "beverage"
   },
   {
     "id": "kirkland-smoked-salmon",
