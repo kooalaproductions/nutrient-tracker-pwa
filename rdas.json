@@ -1,0 +1,392 @@
+{
+  "vitamina_mcg": {
+    "displayName": "Vitamin A",
+    "commonNames": ["Retinol", "Retinol Activity Equivalents (RAE)"],
+    "unit": "mcg",
+    "rdas": {
+      "female": { "default": 700, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 700 } ] },
+      "male": { "default": 900, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 900 } ] }
+    },
+    "upperLimit": 3000,
+    "upperLimitNote": "3000mcg UL applies to preformed vitamin A (retinol); does not apply to provitamin A carotenoids from plant sources.",
+    "aiOnly": false,
+    "notes": null
+  },
+  "thiamin_mg": {
+    "displayName": "Thiamin",
+    "commonNames": ["Vitamin B1", "Thiamine"],
+    "unit": "mg",
+    "rdas": {
+      "female": { "default": 1.1, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 1.1 } ] },
+      "male": { "default": 1.2, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 1.2 } ] }
+    },
+    "upperLimit": null,
+    "upperLimitNote": null,
+    "aiOnly": false,
+    "notes": null
+  },
+  "riboflavin_mg": {
+    "displayName": "Riboflavin",
+    "commonNames": ["Vitamin B2"],
+    "unit": "mg",
+    "rdas": {
+      "female": { "default": 1.1, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 1.1 } ] },
+      "male": { "default": 1.3, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 1.3 } ] }
+    },
+    "upperLimit": null,
+    "upperLimitNote": null,
+    "aiOnly": false,
+    "notes": null
+  },
+  "niacin_mg": {
+    "displayName": "Niacin",
+    "commonNames": ["Vitamin B3", "Nicotinic acid", "Niacinamide"],
+    "unit": "mg",
+    "rdas": {
+      "female": { "default": 14, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 14 } ] },
+      "male": { "default": 16, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 16 } ] }
+    },
+    "upperLimit": 35,
+    "upperLimitNote": "35mg UL applies to niacin from supplements/fortified foods (as nicotinic acid); does not apply to niacin naturally occurring in food.",
+    "aiOnly": false,
+    "notes": null
+  },
+  "pantothenicacid_mg": {
+    "displayName": "Pantothenic Acid",
+    "commonNames": ["Vitamin B5"],
+    "unit": "mg",
+    "rdas": {
+      "female": { "default": 5, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 5 } ] },
+      "male": { "default": 5, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 5 } ] }
+    },
+    "upperLimit": null,
+    "upperLimitNote": null,
+    "aiOnly": true,
+    "notes": null
+  },
+  "vitaminb6_mg": {
+    "displayName": "Vitamin B6",
+    "commonNames": ["Pyridoxine"],
+    "unit": "mg",
+    "rdas": {
+      "female": { "default": 1.3, "ageGroups": [ { "minAge": 19, "maxAge": 50, "rda": 1.3 }, { "minAge": 51, "maxAge": 999, "rda": 1.5 } ] },
+      "male": { "default": 1.3, "ageGroups": [ { "minAge": 19, "maxAge": 50, "rda": 1.3 }, { "minAge": 51, "maxAge": 999, "rda": 1.7 } ] }
+    },
+    "upperLimit": 100,
+    "upperLimitNote": null,
+    "aiOnly": false,
+    "notes": null
+  },
+  "biotin_mcg": {
+    "displayName": "Biotin",
+    "commonNames": ["Vitamin B7"],
+    "unit": "mcg",
+    "rdas": {
+      "female": { "default": 30, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 30 } ] },
+      "male": { "default": 30, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 30 } ] }
+    },
+    "upperLimit": null,
+    "upperLimitNote": null,
+    "aiOnly": true,
+    "notes": null
+  },
+  "folate_mcg": {
+    "displayName": "Folate",
+    "commonNames": ["Vitamin B9", "Folic acid", "Dietary Folate Equivalents (DFE)"],
+    "unit": "mcg",
+    "rdas": {
+      "female": { "default": 400, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 400 } ] },
+      "male": { "default": 400, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 400 } ] }
+    },
+    "upperLimit": 1000,
+    "upperLimitNote": "1000mcg UL applies to synthetic folic acid from supplements/fortified foods only; does not apply to folate naturally occurring in food.",
+    "aiOnly": false,
+    "notes": null
+  },
+  "vitaminb12_mcg": {
+    "displayName": "Vitamin B12",
+    "commonNames": ["Cobalamin"],
+    "unit": "mcg",
+    "rdas": {
+      "female": { "default": 2.4, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 2.4 } ] },
+      "male": { "default": 2.4, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 2.4 } ] }
+    },
+    "upperLimit": null,
+    "upperLimitNote": null,
+    "aiOnly": false,
+    "notes": null
+  },
+  "vitaminc_mg": {
+    "displayName": "Vitamin C",
+    "commonNames": ["Ascorbic acid"],
+    "unit": "mg",
+    "rdas": {
+      "female": { "default": 75, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 75 } ] },
+      "male": { "default": 90, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 90 } ] }
+    },
+    "upperLimit": 2000,
+    "upperLimitNote": null,
+    "aiOnly": false,
+    "notes": "Smokers need +35mg above RDA."
+  },
+  "choline_mg": {
+    "displayName": "Choline",
+    "commonNames": [],
+    "unit": "mg",
+    "rdas": {
+      "female": { "default": 425, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 425 } ] },
+      "male": { "default": 550, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 550 } ] }
+    },
+    "upperLimit": 3500,
+    "upperLimitNote": null,
+    "aiOnly": true,
+    "notes": null
+  },
+  "vitamind_mcg": {
+    "displayName": "Vitamin D",
+    "commonNames": ["Calciferol", "Cholecalciferol"],
+    "unit": "mcg",
+    "rdas": {
+      "female": { "default": 15, "ageGroups": [ { "minAge": 19, "maxAge": 70, "rda": 15 }, { "minAge": 71, "maxAge": 999, "rda": 20 } ] },
+      "male": { "default": 15, "ageGroups": [ { "minAge": 19, "maxAge": 70, "rda": 15 }, { "minAge": 71, "maxAge": 999, "rda": 20 } ] }
+    },
+    "upperLimit": 100,
+    "upperLimitNote": null,
+    "aiOnly": false,
+    "notes": "15mcg = 600 IU; 20mcg = 800 IU."
+  },
+  "vitamine_mg": {
+    "displayName": "Vitamin E",
+    "commonNames": ["Alpha-tocopherol"],
+    "unit": "mg",
+    "rdas": {
+      "female": { "default": 15, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 15 } ] },
+      "male": { "default": 15, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 15 } ] }
+    },
+    "upperLimit": 1000,
+    "upperLimitNote": "1000mg UL applies to alpha-tocopherol from supplements (any form); does not apply to vitamin E naturally occurring in food.",
+    "aiOnly": false,
+    "notes": null
+  },
+  "vitamink_mcg": {
+    "displayName": "Vitamin K",
+    "commonNames": ["Phylloquinone", "Menaquinone"],
+    "unit": "mcg",
+    "rdas": {
+      "female": { "default": 90, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 90 } ] },
+      "male": { "default": 120, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 120 } ] }
+    },
+    "upperLimit": null,
+    "upperLimitNote": null,
+    "aiOnly": true,
+    "notes": null
+  },
+  "calcium_mg": {
+    "displayName": "Calcium",
+    "commonNames": [],
+    "unit": "mg",
+    "rdas": {
+      "female": { "default": 1000, "ageGroups": [ { "minAge": 19, "maxAge": 50, "rda": 1000 }, { "minAge": 51, "maxAge": 999, "rda": 1200 } ] },
+      "male": { "default": 1000, "ageGroups": [ { "minAge": 19, "maxAge": 70, "rda": 1000 }, { "minAge": 71, "maxAge": 999, "rda": 1200 } ] }
+    },
+    "upperLimit": 2500,
+    "upperLimitNote": "2500mg UL applies to ages 19-50; NIH ODS lists a lower UL of 2000mg for adults 51+ -- flagged for review, see report.",
+    "aiOnly": false,
+    "notes": null
+  },
+  "chromium_mcg": {
+    "displayName": "Chromium",
+    "commonNames": [],
+    "unit": "mcg",
+    "rdas": {
+      "female": { "default": 25, "ageGroups": [ { "minAge": 19, "maxAge": 50, "rda": 25 }, { "minAge": 51, "maxAge": 999, "rda": 20 } ] },
+      "male": { "default": 35, "ageGroups": [ { "minAge": 19, "maxAge": 50, "rda": 35 }, { "minAge": 51, "maxAge": 999, "rda": 30 } ] }
+    },
+    "upperLimit": null,
+    "upperLimitNote": null,
+    "aiOnly": true,
+    "notes": null
+  },
+  "copper_mcg": {
+    "displayName": "Copper",
+    "commonNames": [],
+    "unit": "mcg",
+    "rdas": {
+      "female": { "default": 900, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 900 } ] },
+      "male": { "default": 900, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 900 } ] }
+    },
+    "upperLimit": 10000,
+    "upperLimitNote": null,
+    "aiOnly": false,
+    "notes": null
+  },
+  "fluoride_mg": {
+    "displayName": "Fluoride",
+    "commonNames": [],
+    "unit": "mg",
+    "rdas": {
+      "female": { "default": 3, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 3 } ] },
+      "male": { "default": 4, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 4 } ] }
+    },
+    "upperLimit": 10,
+    "upperLimitNote": null,
+    "aiOnly": false,
+    "notes": null
+  },
+  "iodine_mcg": {
+    "displayName": "Iodine",
+    "commonNames": [],
+    "unit": "mcg",
+    "rdas": {
+      "female": { "default": 150, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 150 } ] },
+      "male": { "default": 150, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 150 } ] }
+    },
+    "upperLimit": 1100,
+    "upperLimitNote": null,
+    "aiOnly": false,
+    "notes": null
+  },
+  "iron_mg": {
+    "displayName": "Iron",
+    "commonNames": [],
+    "unit": "mg",
+    "rdas": {
+      "female": { "default": 18, "ageGroups": [ { "minAge": 19, "maxAge": 50, "rda": 18 }, { "minAge": 51, "maxAge": 999, "rda": 8 } ] },
+      "male": { "default": 8, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 8 } ] }
+    },
+    "upperLimit": 45,
+    "upperLimitNote": null,
+    "aiOnly": false,
+    "notes": null
+  },
+  "magnesium_mg": {
+    "displayName": "Magnesium",
+    "commonNames": [],
+    "unit": "mg",
+    "rdas": {
+      "female": { "default": 310, "ageGroups": [ { "minAge": 19, "maxAge": 30, "rda": 310 }, { "minAge": 31, "maxAge": 999, "rda": 320 } ] },
+      "male": { "default": 400, "ageGroups": [ { "minAge": 19, "maxAge": 30, "rda": 400 }, { "minAge": 31, "maxAge": 999, "rda": 420 } ] }
+    },
+    "upperLimit": 350,
+    "upperLimitNote": "350mg limit applies to supplemental magnesium only; dietary magnesium from food has no upper limit.",
+    "aiOnly": false,
+    "notes": null
+  },
+  "manganese_mg": {
+    "displayName": "Manganese",
+    "commonNames": [],
+    "unit": "mg",
+    "rdas": {
+      "female": { "default": 1.8, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 1.8 } ] },
+      "male": { "default": 2.3, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 2.3 } ] }
+    },
+    "upperLimit": 11,
+    "upperLimitNote": null,
+    "aiOnly": true,
+    "notes": null
+  },
+  "molybdenum_mcg": {
+    "displayName": "Molybdenum",
+    "commonNames": [],
+    "unit": "mcg",
+    "rdas": {
+      "female": { "default": 45, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 45 } ] },
+      "male": { "default": 45, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 45 } ] }
+    },
+    "upperLimit": 2000,
+    "upperLimitNote": null,
+    "aiOnly": false,
+    "notes": null
+  },
+  "phosphorus_mg": {
+    "displayName": "Phosphorus",
+    "commonNames": [],
+    "unit": "mg",
+    "rdas": {
+      "female": { "default": 700, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 700 } ] },
+      "male": { "default": 700, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 700 } ] }
+    },
+    "upperLimit": 4000,
+    "upperLimitNote": "4000mg UL applies to ages 19-70; UL drops to 3000mg for ages 71+.",
+    "aiOnly": false,
+    "notes": null
+  },
+  "potassium_mg": {
+    "displayName": "Potassium",
+    "commonNames": [],
+    "unit": "mg",
+    "rdas": {
+      "female": { "default": 2600, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 2600 } ] },
+      "male": { "default": 3400, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 3400 } ] }
+    },
+    "upperLimit": null,
+    "upperLimitNote": null,
+    "aiOnly": true,
+    "notes": null
+  },
+  "selenium_mcg": {
+    "displayName": "Selenium",
+    "commonNames": [],
+    "unit": "mcg",
+    "rdas": {
+      "female": { "default": 55, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 55 } ] },
+      "male": { "default": 55, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 55 } ] }
+    },
+    "upperLimit": 400,
+    "upperLimitNote": null,
+    "aiOnly": false,
+    "notes": null
+  },
+  "sodium_mg": {
+    "displayName": "Sodium",
+    "commonNames": [],
+    "unit": "mg",
+    "rdas": {
+      "female": { "default": 1500, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 1500 } ] },
+      "male": { "default": 1500, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 1500 } ] }
+    },
+    "upperLimit": null,
+    "upperLimitNote": null,
+    "aiOnly": true,
+    "notes": "AI of 1500mg/day. A separate, higher Chronic Disease Risk Reduction (CDRR) intake of 2300mg/day is the threshold most people should aim to stay below -- not itself an RDA/UL."
+  },
+  "zinc_mg": {
+    "displayName": "Zinc",
+    "commonNames": [],
+    "unit": "mg",
+    "rdas": {
+      "female": { "default": 8, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 8 } ] },
+      "male": { "default": 11, "ageGroups": [ { "minAge": 19, "maxAge": 999, "rda": 11 } ] }
+    },
+    "upperLimit": 40,
+    "upperLimitNote": null,
+    "aiOnly": false,
+    "notes": null
+  },
+  "omega3_mg": {
+    "displayName": "Omega-3 Fatty Acids",
+    "commonNames": ["EPA", "DHA", "ALA"],
+    "unit": "mg",
+    "rdas": {
+      "female": { "default": null, "ageGroups": [] },
+      "male": { "default": null, "ageGroups": [] }
+    },
+    "upperLimit": null,
+    "upperLimitNote": null,
+    "aiOnly": false,
+    "notes": "No RDA or AI is established for combined EPA+DHA. Commonly recommended intake is 1000-4000mg EPA+DHA combined per day."
+  },
+  "cholesterol_mg": {
+    "displayName": "Cholesterol",
+    "commonNames": [],
+    "unit": "mg",
+    "rdas": {
+      "female": { "default": null, "ageGroups": [] },
+      "male": { "default": null, "ageGroups": [] }
+    },
+    "upperLimit": null,
+    "upperLimitNote": null,
+    "aiOnly": false,
+    "notes": "No RDA is established. General dietary guidance suggests limiting intake to under 300mg/day."
+  }
+}
