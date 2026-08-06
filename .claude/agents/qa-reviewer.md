@@ -50,3 +50,51 @@ Format your report with these severity levels:
 🟢 SUGGESTION — low priority improvement
 
 End every report with one of: ✅ PASS | ⚠️ NEEDS FIXES | 🚨 CRITICAL ISSUES
+
+## Bug Tracker Integration
+
+After every audit, write findings to bugs.json in the project root.
+
+### Reading bugs.json before writing:
+1. Read bugs.json first
+2. For each issue found, check if a bug with the same title already
+   exists (case-insensitive match on the title field)
+3. Only write NEW bugs — never create duplicates
+4. If an issue was previously marked status: "fixed" but you find
+   it again, update its status back to "open" and add a note in
+   fixNotes: "Regression found on [date]"
+
+### Bug object shape (follow exactly):
+{
+  "id": "bug_NNN",           // next sequential number, zero-padded to 3 digits
+  "date": "YYYY-MM-DD",      // date found
+  "severity": "critical",    // critical | warning | suggestion
+  "status": "open",          // open | fixed | deferred
+  "area": "persistence",     // persistence | ui | pwa | data | logic | accessibility
+  "title": "Short title",    // under 60 chars, specific
+  "description": "...",      // full description of the problem and where it was found
+  "foundBy": "qa-reviewer",  // always this value
+  "fixedBy": null,           // agent name that fixed it, filled in later
+  "fixedDate": null,         // date fixed, filled in later
+  "fixNotes": null           // what was changed to fix it, filled in later
+}
+
+### Severity mapping:
+🔴 CRITICAL  → severity: "critical"
+🟡 WARNING   → severity: "warning"
+🟢 SUGGESTION → severity: "suggestion"
+
+### Area mapping:
+- Settings/localStorage/data saving → "persistence"
+- HTML/CSS/layout/touch targets    → "ui"
+- Service worker/manifest/offline  → "pwa"
+- foods.json/vitamins.json schema  → "data"
+- JS functions/calculations/logic  → "logic"
+- Touch targets/zoom/screen reader → "accessibility"
+
+### After writing to bugs.json, always report:
+- How many new bugs were added
+- How many were skipped (already existed)
+- How many regressions were found (previously fixed, now open again)
+- Current open bug count by severity
+- The full updated bugs.json content so you can verify it
