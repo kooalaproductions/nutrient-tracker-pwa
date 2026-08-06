@@ -1090,29 +1090,43 @@
     };
   }
 
-  // Sums the 30 micronutrient fields across dateString's FOOD log entries
-  // only, each field multiplied by that entry's multiplier -- same principle
-  // as computeTotals() for the 7 core macro fields above.
+  // Sums the 30 micronutrient fields across dateString's log entries -- both
+  // food and supplement -- each field multiplied by that entry's multiplier,
+  // same principle as computeTotals() for the 7 core macro fields above.
   //
-  // Supplement entries (type === "supplement") are explicitly skipped: they
-  // carry a completely different shape (itemId/itemName/dose/doseUnit) and
-  // vitamins.json has no field mapping a supplement to a specific rdas.json
-  // nutrient key -- each supplement item just has one headline
-  // amountPerDose/amountUnit (e.g. "Vitamin D3 2000 IU") with nothing
-  // structurally linking it to vitamind_mcg, and IU-to-mcg unit conversion
-  // would be needed even if such a link existed. Rather than guess by
-  // parsing supplement names/categories, this pass only sums from food
-  // entries. This is a known follow-up (adding a nutrientKey + unit
-  // conversion to vitamins.json items), not an oversight.
+  // Food entries get their micronutrient fields snapshotted by addLogEntry()
+  // (bug_003); supplement entries get theirs snapshotted by logSupplement()
+  // (bug_005), which maps vitamins.json's nutrientKey/conversionFactor onto
+  // entry[nutrientKey] and sets entry.multiplier from dose/commonDose. Both
+  // entry shapes converge on the same entry[k] * entry.multiplier contract,
+  // so this loop needs no per-type branching.
   //
   // Returns a sparse object: a key is only present if at least one logged
-  // food entry actually carried that field (nutrients nothing logged today
+  // entry actually carried that field (nutrients nothing logged today
   // touched are simply absent, not present with value 0).
   function getDailyMicronutrientTotals(dateString) {
     var entries = state.logEntries[dateString] || [];
     var totals = {};
     entries.forEach(function (e) {
-      if (e.type === "supplement") return; // see comment above -- no nutrientKey mapping yet
+      MICRONUTRIENT_KEYS.forEach(function (k) {
+        if (e[k] == null) return;
+        if (totals[k] == null) totals[k] = 0;
+        totals[k] += Number(e[k]) * e.multiplier;
+      });
+    });
+    return totals;
+  }
+
+  // Same as getDailyMicronutrientTotals() but restricted to supplement-type
+  // entries only -- used by getMicronutrientStatus() to check upper limits
+  // that apply solely to supplemental intake (e.g. magnesium, niacin,
+  // folate, vitamin E; see isSupplementOnlyUL()), never to combined
+  // food+supplement totals.
+  function getDailySupplementMicronutrientTotals(dateString) {
+    var entries = state.logEntries[dateString] || [];
+    var totals = {};
+    entries.forEach(function (e) {
+      if (e.type !== "supplement") return;
       MICRONUTRIENT_KEYS.forEach(function (k) {
         if (e[k] == null) return;
         if (totals[k] == null) totals[k] = 0;
@@ -1123,8 +1137,8 @@
   }
 
   // One row per micronutrient present in dateString's totals (i.e. present in
-  // at least one logged food entry today), for a future micronutrient-status
-  // UI to render.
+  // at least one logged food or supplement entry today), for a future
+  // micronutrient-status UI to render.
   //
   // Status resolution (two axes, see note below):
   //   RDA-relative bucket (consumed / rda * 100 = percentOfRDA):
@@ -1171,6 +1185,7 @@
 
   function getMicronutrientStatus(dateString) {
     var totals = getDailyMicronutrientTotals(dateString);
+    var supplementTotals = getDailySupplementMicronutrientTotals(dateString);
     var rows = Object.keys(totals).map(function (key) {
       var consumed = totals[key];
       var info = getUserRDA(key);
@@ -1196,14 +1211,16 @@
 
       // UL axis overrides the RDA-relative bucket above when applicable (see
       // comment block above this function for why these are separate axes).
-      // TODO: when supplement wiring lands, apply UL only to
-      // supplement-sourced magnesium (see getDailyMicronutrientTotals
-      // supplement contribution — currently skipped).
-      // rdas.json upperLimitNote: "supplement-only UL"
-      if (info.upperLimit != null && !isSupplementOnlyUL(key)) {
-        if (consumed >= info.upperLimit) {
+      // For supplement-only-UL nutrients (rdas.json upperLimitNote mentions
+      // "supplement" -- magnesium, niacin, folate, vitamin E), the UL is
+      // checked against the supplement-sourced portion only, since food
+      // sources of these nutrients have no such limit (bug_004/bug_005).
+      // All other nutrients check the combined food+supplement total.
+      if (info.upperLimit != null) {
+        var ulConsumed = isSupplementOnlyUL(key) ? (supplementTotals[key] || 0) : consumed;
+        if (ulConsumed >= info.upperLimit) {
           status = "over_ul";
-        } else if (consumed >= info.upperLimit * 0.75) {
+        } else if (ulConsumed >= info.upperLimit * 0.75) {
           status = "approaching_ul";
         }
       }
@@ -1716,16 +1733,25 @@
       notes: vitamin ? (vitamin.notes || "") : "",
       userNote: userNote || ""
     };
+    // Snapshot the nutrient contribution onto the entry, same principle as
+    // addLogEntry() for food (bug_003): entry.multiplier normalizes the
+    // logged dose against the product's commonDose (e.g. dosing 2 tablets
+    // when commonDose is 1 = multiplier 2), and entry[nutrientKey] stores
+    // the PER-COMMON-DOSE-UNIT contribution so getDailyMicronutrientTotals()
+    // can do entry[k] * entry.multiplier like it already does for food.
+    // vitamin.nutrientKey is null for supplements with no rdas.json mapping
+    // (CoQ10, melatonin, turmeric, glucosamine, probiotic) -- left absent.
+    var commonDose = vitamin ? (vitamin.commonDose || 1) : 1;
+    entry.multiplier = Number(dose) / commonDose;
+    if (vitamin && vitamin.nutrientKey) {
+      entry[vitamin.nutrientKey] = Number(vitamin.amountPerDose) * (vitamin.conversionFactor != null ? vitamin.conversionFactor : 1);
+    }
     state.logEntries[key].push(entry);
     saveLogEntries();
     renderTotals();
     renderLogList();
     renderCalendar();
     renderRecentDays();
-    // Supplements don't carry a nutrientKey mapping yet (see
-    // getDailyMicronutrientTotals()'s comment), so this is a harmless no-op
-    // today -- kept here for consistency with addLogEntry() and to be
-    // correct automatically once that mapping exists.
     renderMicroSummary();
     renderMicroView();
     showToast("Logged " + entry.itemName);

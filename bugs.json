@@ -51,5 +51,19 @@
     "fixedBy": "bug-fixer",
     "fixedDate": "2026-08-06",
     "fixNotes": "Added isSupplementOnlyUL() helper. Magnesium UL check now skipped in getMicronutrientStatus() since current totals are food-only. TODO comment added for supplement wiring phase."
+  },
+  {
+    "id": "bug_005",
+    "date": "2026-08-06",
+    "severity": "critical",
+    "status": "open",
+    "area": "logic",
+    "title": "Supplement log entries never contribute to micronutrient totals",
+    "description": "Reported by user: logging a supplement (e.g. Zinc 50mg) does not update Today's Micronutrients -- the nutrient still shows as 'Not logged today'. Root cause: getDailyMicronutrientTotals() (index.html ~line 1111-1123) explicitly skips every log entry with type === \"supplement\" (line 1115), and even if it didn't, vitamins.json entries have no field mapping a supplement to a specific rdas.json nutrient key -- each entry only has a single headline amountPerDose/amountUnit (e.g. \"Zinc 50mg\") with nothing structurally linking it to zinc_mg, and no unit conversion (e.g. IU-to-mcg for Vitamin D3) exists either. logSupplement() (~line 1702) also never snapshots any nutrient contribution onto the log entry, unlike addLogEntry() for food (fixed in bug_003). This is a known, previously-documented gap (see CLAUDE.md Known Gaps and the qa-reviewer micronutrient audit, Check 4) now confirmed as user-facing. Also affects the magnesium UL fix from bug_004: isSupplementOnlyUL()-flagged nutrients (magnesium, niacin, folate, vitamin E) currently skip their upper-limit check entirely, since there is no supplement-sourced total to check against -- once supplement contributions are wired in, that check needs to run against the supplement-sourced portion specifically, not just be skipped.",
+    "affectedLines": "index.html ~1111-1123 (getDailyMicronutrientTotals()), ~1702-1734 (logSupplement()), ~1161-1220 (getMicronutrientStatus(), isSupplementOnlyUL() gate from bug_004); vitamins.json (all 20 entries, missing nutrientKey/conversionFactor fields)",
+    "foundBy": "user (live usage)",
+    "fixedBy": "bug-fixer",
+    "fixedDate": "2026-08-06",
+    "fixNotes": "logSupplement() now snapshots entry.multiplier (dose/commonDose) and entry[vitamin.nutrientKey] (amountPerDose * conversionFactor) onto each supplement log entry, mirroring addLogEntry()'s food snapshot pattern; getDailyMicronutrientTotals() no longer skips type===\"supplement\" entries so they flow through the same MICRONUTRIENT_KEYS summation loop as food; added getDailySupplementMicronutrientTotals() to sum only supplement-sourced contributions; and getMicronutrientStatus() now checks the upper limit for supplement-only-UL nutrients (magnesium, niacin, folate, vitamin E) against that supplement-only total instead of skipping the check entirely, while all other nutrients keep checking the combined food+supplement total."
   }
 ]
