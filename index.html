@@ -840,8 +840,8 @@
         '<div><label for="' + p + '_weightUnit">Unit</label><select id="' + p + '_weightUnit"><option value="lb">lb</option><option value="kg">kg</option></select></div>' +
       '</div>' +
       '<div class="form-grid">' +
-        '<div><label for="' + p + '_height">Height</label><input type="number" id="' + p + '_height" min="0" step="any" placeholder="e.g. 68" /></div>' +
-        '<div><label for="' + p + '_heightUnit">Unit</label><select id="' + p + '_heightUnit"><option value="in">in</option><option value="cm">cm</option></select></div>' +
+        '<div><label for="' + p + '_heightFeet">Height (ft)</label><input type="number" id="' + p + '_heightFeet" min="3" max="8" step="1" placeholder="5" /></div>' +
+        '<div><label for="' + p + '_heightInches">Height (in)</label><input type="number" id="' + p + '_heightInches" min="0" max="11" step="1" placeholder="9" /></div>' +
       '</div>' +
       '<div class="form-grid">' +
         '<div><label for="' + p + '_age">Age</label><input type="number" id="' + p + '_age" min="0" step="1" placeholder="e.g. 30" /></div>' +
@@ -873,8 +873,14 @@
     profile = profile || {};
     document.getElementById(p + "_weight").value = profile.weight != null ? profile.weight : "";
     document.getElementById(p + "_weightUnit").value = profile.weightUnit || "lb";
-    document.getElementById(p + "_height").value = profile.height != null ? profile.height : "";
-    document.getElementById(p + "_heightUnit").value = profile.heightUnit || "in";
+    if (profile.height != null) {
+      var totalInches = profile.heightUnit === "cm" ? profile.height / IN_TO_CM : profile.height;
+      document.getElementById(p + "_heightFeet").value = Math.floor(totalInches / 12);
+      document.getElementById(p + "_heightInches").value = Math.round(totalInches % 12);
+    } else {
+      document.getElementById(p + "_heightFeet").value = "";
+      document.getElementById(p + "_heightInches").value = "";
+    }
     document.getElementById(p + "_age").value = profile.age != null ? profile.age : "";
     document.getElementById(p + "_sex").value = profile.sex || "male";
     document.getElementById(p + "_activityLevel").value = profile.activityLevel || "sedentary";
@@ -887,17 +893,21 @@
   function readProfileForm(p) {
     var errorEl = document.getElementById(p + "_error");
     var weight = Number(document.getElementById(p + "_weight").value);
-    var height = Number(document.getElementById(p + "_height").value);
+    var heightFeet = Number(document.getElementById(p + "_heightFeet").value);
+    var heightInches = Number(document.getElementById(p + "_heightInches").value);
     var age = Number(document.getElementById(p + "_age").value);
     var weightUnit = document.getElementById(p + "_weightUnit").value;
-    var heightUnit = document.getElementById(p + "_heightUnit").value;
     var sex = document.getElementById(p + "_sex").value;
     var activityLevel = document.getElementById(p + "_activityLevel").value;
     var goalType = document.getElementById(p + "_goalType").value;
+    var heightFeetOk = document.getElementById(p + "_heightFeet").value !== "" && !isNaN(heightFeet) && heightFeet >= 3 && heightFeet <= 8;
+    var heightInchesOk = document.getElementById(p + "_heightInches").value !== "" && !isNaN(heightInches) && heightInches >= 0 && heightInches <= 11;
+    var height = heightFeet * 12 + heightInches;
+    var heightUnit = "in";
 
-    if (!weight || weight <= 0 || !height || height <= 0 || !age || age <= 0) {
+    if (!weight || weight <= 0 || !heightFeetOk || !heightInchesOk || !age || age <= 0) {
       if (errorEl) {
-        errorEl.textContent = "Please fill in weight, height, and age.";
+        errorEl.textContent = "Please fill in weight, age, and a valid height (feet 3-8, inches 0-11).";
         errorEl.style.display = "block";
       }
       return null;
