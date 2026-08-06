@@ -1158,6 +1158,17 @@
   // more urgent to surface than a merely-low nutrient.
   var MICRONUTRIENT_STATUS_ORDER = ["over_ul", "approaching_ul", "critical", "low", "approaching", "met"];
 
+  // Some nutrients' upperLimit only applies to supplemental intake, not food
+  // sources (e.g. magnesium -- see rdas.json upperLimitNote). Given a
+  // nutrient key, looks up its rdas.json entry directly (same state.rdas[key]
+  // pattern getUserRDA() and getMicronutrientStatus() already use) and
+  // checks whether upperLimitNote calls out "supplement".
+  function isSupplementOnlyUL(nutrientKey) {
+    var entry = state.rdas[nutrientKey];
+    if (!entry || !entry.upperLimitNote) return false;
+    return entry.upperLimitNote.toLowerCase().includes('supplement');
+  }
+
   function getMicronutrientStatus(dateString) {
     var totals = getDailyMicronutrientTotals(dateString);
     var rows = Object.keys(totals).map(function (key) {
@@ -1185,7 +1196,11 @@
 
       // UL axis overrides the RDA-relative bucket above when applicable (see
       // comment block above this function for why these are separate axes).
-      if (info.upperLimit != null) {
+      // TODO: when supplement wiring lands, apply UL only to
+      // supplement-sourced magnesium (see getDailyMicronutrientTotals
+      // supplement contribution — currently skipped).
+      // rdas.json upperLimitNote: "supplement-only UL"
+      if (info.upperLimit != null && !isSupplementOnlyUL(key)) {
         if (consumed >= info.upperLimit) {
           status = "over_ul";
         } else if (consumed >= info.upperLimit * 0.75) {

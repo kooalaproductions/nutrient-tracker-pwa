@@ -37,5 +37,19 @@
     "fixedBy": "claude",
     "fixedDate": "2026-08-05",
     "fixNotes": "addLogEntry() now also copies any MICRONUTRIENT_KEYS field the source food item actually has data for onto the log entry (food[k] != null check, matching the sparse-field convention getDailyMicronutrientTotals() already expects -- fields the food doesn't track are left absent, not defaulted to 0). Verified live: freshly logging Kirkland Avocado Oil after the fix correctly showed Vitamin E 1.8/15mg (12%) in the micronutrient detail view."
+  },
+  {
+    "id": "bug_004",
+    "date": "2026-08-06",
+    "severity": "critical",
+    "status": "fixed",
+    "area": "logic",
+    "title": "Magnesium UL applied to food sources — should be supplements only",
+    "description": "getMicronutrientStatus() applies the 350mg upper limit to all magnesium totals regardless of source. rdas.json line 271 explicitly notes the UL applies to supplemental magnesium only — dietary magnesium from food has no upper limit. Users eating normal amounts of nuts, greens, or whole grains easily exceed 350mg from food alone and get a false over_ul warning. Will get worse once supplement wiring lands since supplement magnesium will stack onto the same unqualified total.",
+    "affectedLines": "index.html ~1188-1193 (getMicronutrientStatus()), rdas.json line 271",
+    "foundBy": "qa-reviewer",
+    "fixedBy": "bug-fixer",
+    "fixedDate": "2026-08-06",
+    "fixNotes": "Added isSupplementOnlyUL() helper. Magnesium UL check now skipped in getMicronutrientStatus() since current totals are food-only. TODO comment added for supplement wiring phase."
   }
 ]
