@@ -24,6 +24,12 @@
     --text: #1B1B18;
     --text-secondary: #6B6B63;
     --danger: #B3452C;
+    --nutrient-protein: #3D6D99;
+    --nutrient-carbs: #C68A3D;
+    --nutrient-fat: #8C5E86;
+    --nutrient-sugar: #BC5A78;
+    --nutrient-fiber: #7A6142;
+    --nutrient-sodium: #3D8A94;
     --radius: 12px;
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -78,6 +84,8 @@
   .stat .label { font-size: 10.5px; color: var(--text-secondary); margin-top: 2px; }
   .stat .sub { font-size: 9.5px; color: var(--text-secondary); margin-top: 2px; }
   .stat .sub.danger { color: var(--danger); font-weight: 600; }
+  .stat-bar-track { height: 4px; border-radius: 999px; background: var(--border); overflow: hidden; margin-top: 4px; }
+  .stat-bar-fill { height: 100%; border-radius: 999px; }
 
   h2 { font-size: 15px; margin: 0 0 10px; }
 
@@ -980,13 +988,34 @@
       ? fmt(r.consumed) + unitSuffix
       : fmt(r.consumed) + " / " + fmt(r.goal) + unitSuffix;
 
+    // Per-nutrient accent color for this tile's value text + progress bar.
+    // Calories keeps the app's original --accent green (headline metric).
+    var NUTRIENT_TILE_COLORS = {
+      protein_g: "var(--nutrient-protein)",
+      carbs_g: "var(--nutrient-carbs)",
+      fat_g: "var(--nutrient-fat)",
+      sugar_g: "var(--nutrient-sugar)",
+      fiber_g: "var(--nutrient-fiber)",
+      sodium_mg: "var(--nutrient-sodium)"
+    };
+    var tileColor = isCalories ? "var(--accent)" : (NUTRIENT_TILE_COLORS[r.key] || "var(--accent)");
+
     var subHtml = "";
+    var barHtml = "";
     if (r.goal != null) {
       var remaining = r.goal - r.consumed;
+      // Fill % toward goal; guard against a zero/invalid goal so this never
+      // produces NaN/Infinity width.
+      var pct = r.goal > 0 ? Math.min(100, (r.consumed / r.goal) * 100) : (r.consumed > 0 ? 100 : 0);
+      var barColor = tileColor;
       if (r.direction === "max") {
         subHtml = r.consumed > r.goal
           ? '<div class="sub danger">' + fmt(r.consumed - r.goal) + unitSuffix + ' over limit</div>'
           : '<div class="sub">' + fmt(remaining) + unitSuffix + ' left before limit</div>';
+        if (r.consumed > r.goal) {
+          pct = 100;
+          barColor = "var(--danger)";
+        }
       } else {
         // "target" (calories/protein/carbs/fat) and "min" (fiber) both read
         // as "X left" until met, then "Goal reached".
@@ -994,13 +1023,15 @@
           ? '<div class="sub">Goal reached</div>'
           : '<div class="sub">' + fmt(remaining) + unitSuffix + ' left</div>';
       }
+      barHtml = '<div class="stat-bar-track"><div class="stat-bar-fill" style="width:' + Math.round(pct) + '%; background:' + barColor + ';"></div></div>';
     }
 
     return (
       '<div class="stat">' +
-        '<div class="value">' + valueText + '</div>' +
+        '<div class="value" style="color:' + tileColor + ';">' + valueText + '</div>' +
         '<div class="label">' + labelText + '</div>' +
         subHtml +
+        barHtml +
       '</div>'
     );
   }
