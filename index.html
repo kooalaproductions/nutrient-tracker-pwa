@@ -566,10 +566,26 @@
   var STORAGE_DISPLAY_PREFS = "nt_displayPrefs";
   var NUTRIENT_KEYS = ["calories", "protein_g", "carbs_g", "fat_g", "sugar_g", "fiber_g", "sodium_mg"];
 
+  // The 30 micronutrient field names, matching foods.json's existing
+  // lowercase/unit-suffixed field-naming convention exactly, and matching
+  // rdas.json's top-level keys 1:1. Hardcoded (rather than derived from
+  // state.rdas) so callers have a stable key list even before rdas.json's
+  // fetch resolves -- same reasoning as NUTRIENT_KEYS above being a fixed
+  // constant rather than derived from foods.json.
+  var MICRONUTRIENT_KEYS = [
+    "vitamina_mcg", "thiamin_mg", "riboflavin_mg", "niacin_mg", "pantothenicacid_mg",
+    "vitaminb6_mg", "biotin_mcg", "folate_mcg", "vitaminb12_mcg", "vitaminc_mg",
+    "choline_mg", "vitamind_mcg", "vitamine_mg", "vitamink_mcg", "calcium_mg",
+    "chromium_mcg", "copper_mcg", "fluoride_mg", "iodine_mcg", "iron_mg",
+    "magnesium_mg", "manganese_mg", "molybdenum_mcg", "phosphorus_mg", "potassium_mg",
+    "selenium_mcg", "sodium_mg", "zinc_mg", "omega3_mg", "cholesterol_mg"
+  ];
+
   var state = {
     preloadedFoods: [],
     customFoods: [],
     vitamins: [],
+    rdas: {},           // populated at init() via loadRdas() (fetch of rdas.json)
     logEntries: {},   // { "YYYY-MM-DD": [entry, ...] }
     profile: null,     // populated at init() via loadProfile()
     goals: {},         // populated at init() via loadGoals()
@@ -946,6 +962,239 @@
         // same pattern as how foods.json's fetch feeds into renderAll().
         renderSupplementList();
       });
+  }
+
+  // ---------- micronutrient RDAs ----------
+  function loadRdas() {
+    fetch("rdas.json")
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        state.rdas = data;
+      })
+      .catch(function () {
+        state.rdas = {};
+        showToast("Couldn't load nutrient targets");
+      });
+    // Unlike loadVitamins() -> renderSupplementList(), there's no re-render
+    // call chained here: no micronutrient UI exists yet in this file (that's
+    // a separate UI task building screens against getMicronutrientStatus()
+    // etc. below). Once that UI exists, chain a re-render call here the same
+    // way loadVitamins() does.
+  }
+
+  // Reads state.profile.age/state.profile.sex and state.rdas[nutrientKey].
+  // Returns { rda, unit, upperLimit, aiOnly, upperLimitNote } for the current
+  // user. rda is null when rdas.json has no established RDA for this
+  // nutrient at all (Omega-3, Cholesterol -- both have empty ageGroups and a
+  // null "default" for every sex), not just when the profile is incomplete.
+  //
+  // Fallback when state.profile.age/sex is missing (pre-onboarding) OR
+  // nutrientKey isn't in state.rdas: population-average = the mean of the
+  // male and female "default" RDA values (each "default" is itself the DRI
+  // for a representative adult of that sex, e.g. vitaminc_mg female
+  // default=75, male default=90 -> fallback 82.5). This is simple, has no
+  // dependency on age (which we don't have either in this branch), and reads
+  // as a reasonable sex-neutral midpoint rather than silently picking one
+  // sex's number. If nutrientKey isn't in state.rdas at all, there's nothing
+  // to average, so this returns rda: null.
+  function getUserRDA(nutrientKey) {
+    var entry = state.rdas[nutrientKey];
+    if (!entry) {
+      return { rda: null, unit: "", upperLimit: null, aiOnly: false, upperLimitNote: null };
+    }
+
+    var age = state.profile && state.profile.age;
+    var sex = state.profile && state.profile.sex;
+    var rda;
+
+    if (age && sex && entry.rdas[sex]) {
+      var sexRdas = entry.rdas[sex];
+      var group = sexRdas.ageGroups.filter(function (g) {
+        return age >= g.minAge && age <= g.maxAge;
+      })[0];
+      // group may be undefined even with a valid age/sex when ageGroups is
+      // empty (Omega-3, Cholesterol) -- fall back to "default", which is
+      // null for those two, passed through as-is rather than crashing.
+      rda = group ? group.rda : sexRdas.default;
+    } else {
+      var femaleDefault = entry.rdas.female.default;
+      var maleDefault = entry.rdas.male.default;
+      if (femaleDefault == null && maleDefault == null) {
+        rda = null;
+      } else if (femaleDefault == null) {
+        rda = maleDefault;
+      } else if (maleDefault == null) {
+        rda = femaleDefault;
+      } else {
+        rda = (femaleDefault + maleDefault) / 2;
+      }
+    }
+
+    return {
+      rda: rda,
+      unit: entry.unit,
+      upperLimit: entry.upperLimit,
+      aiOnly: entry.aiOnly,
+      upperLimitNote: entry.upperLimitNote
+    };
+  }
+
+  // Sums the 30 micronutrient fields across dateString's FOOD log entries
+  // only, each field multiplied by that entry's multiplier -- same principle
+  // as computeTotals() for the 7 core macro fields above.
+  //
+  // Supplement entries (type === "supplement") are explicitly skipped: they
+  // carry a completely different shape (itemId/itemName/dose/doseUnit) and
+  // vitamins.json has no field mapping a supplement to a specific rdas.json
+  // nutrient key -- each supplement item just has one headline
+  // amountPerDose/amountUnit (e.g. "Vitamin D3 2000 IU") with nothing
+  // structurally linking it to vitamind_mcg, and IU-to-mcg unit conversion
+  // would be needed even if such a link existed. Rather than guess by
+  // parsing supplement names/categories, this pass only sums from food
+  // entries. This is a known follow-up (adding a nutrientKey + unit
+  // conversion to vitamins.json items), not an oversight.
+  //
+  // Returns a sparse object: a key is only present if at least one logged
+  // food entry actually carried that field (nutrients nothing logged today
+  // touched are simply absent, not present with value 0).
+  function getDailyMicronutrientTotals(dateString) {
+    var entries = state.logEntries[dateString] || [];
+    var totals = {};
+    entries.forEach(function (e) {
+      if (e.type === "supplement") return; // see comment above -- no nutrientKey mapping yet
+      MICRONUTRIENT_KEYS.forEach(function (k) {
+        if (e[k] == null) return;
+        if (totals[k] == null) totals[k] = 0;
+        totals[k] += Number(e[k]) * e.multiplier;
+      });
+    });
+    return totals;
+  }
+
+  // One row per micronutrient present in dateString's totals (i.e. present in
+  // at least one logged food entry today), for a future micronutrient-status
+  // UI to render.
+  //
+  // Status resolution (two axes, see note below):
+  //   RDA-relative bucket (consumed / rda * 100 = percentOfRDA):
+  //     critical  < 25%
+  //     low       25-74%
+  //     approaching 75-99%
+  //     met       >=100%
+  //   When rda is null (Omega-3, Cholesterol -- no established RDA at all),
+  //   "percent of RDA" has no meaning, so percentOfRDA: null and this axis
+  //   defaults to status: "met" (there is nothing to be deficient against,
+  //   so it's not flagged as a concern) rather than crashing on a null rda.
+  //
+  //   Upper-limit axis (only when upperLimit is a real number):
+  //     over_ul       consumed >= upperLimit
+  //     approaching_ul  consumed is 75-99% of upperLimit
+  //
+  // AMBIGUITY IN THE BRIEF, RESOLVED: the brief describes over_ul/
+  // approaching_ul as if they were alternatives to the RDA-relative buckets,
+  // but they're actually a separate, higher-priority axis -- a nutrient can
+  // simultaneously be "met" on RDA and "over_ul" on upper limit (e.g. a
+  // supplement-fortified diet meeting the RDA while also blowing past the
+  // UL). Resolved by computing the RDA-relative bucket first, then checking
+  // UL status and letting it OVERRIDE the RDA-relative status when
+  // applicable (over_ul / approaching_ul take priority over
+  // critical/low/approaching/met). If upperLimit is null or consumed is
+  // below 75% of it, the RDA-relative bucket stands untouched.
+  //
+  // Sort order: over_ul first, then critical, low, approaching, met -- the
+  // brief's sort list omitted approaching_ul entirely. Inserted here right
+  // after over_ul and before critical, since an approaching-limit concern is
+  // more urgent to surface than a merely-low nutrient.
+  var MICRONUTRIENT_STATUS_ORDER = ["over_ul", "approaching_ul", "critical", "low", "approaching", "met"];
+
+  function getMicronutrientStatus(dateString) {
+    var totals = getDailyMicronutrientTotals(dateString);
+    var rows = Object.keys(totals).map(function (key) {
+      var consumed = totals[key];
+      var info = getUserRDA(key);
+      var meta = state.rdas[key];
+      var displayName = meta ? meta.displayName : key;
+
+      var percentOfRDA = info.rda != null && info.rda > 0
+        ? Math.round((consumed / info.rda) * 100)
+        : null;
+
+      var status;
+      if (percentOfRDA == null) {
+        status = "met";
+      } else if (percentOfRDA < 25) {
+        status = "critical";
+      } else if (percentOfRDA < 75) {
+        status = "low";
+      } else if (percentOfRDA < 100) {
+        status = "approaching";
+      } else {
+        status = "met";
+      }
+
+      // UL axis overrides the RDA-relative bucket above when applicable (see
+      // comment block above this function for why these are separate axes).
+      if (info.upperLimit != null) {
+        if (consumed >= info.upperLimit) {
+          status = "over_ul";
+        } else if (consumed >= info.upperLimit * 0.75) {
+          status = "approaching_ul";
+        }
+      }
+
+      return {
+        key: key,
+        displayName: displayName,
+        consumed: consumed,
+        unit: info.unit,
+        rda: info.rda,
+        upperLimit: info.upperLimit,
+        percentOfRDA: percentOfRDA,
+        status: status,
+        aiOnly: info.aiOnly
+      };
+    });
+
+    rows.sort(function (a, b) {
+      return MICRONUTRIENT_STATUS_ORDER.indexOf(a.status) - MICRONUTRIENT_STATUS_ORDER.indexOf(b.status);
+    });
+    return rows;
+  }
+
+  // For a future "today's micronutrients" summary card: counts by bucket plus
+  // the 3 most-deficient nutrients to headline.
+  //
+  // overULCount counts status "over_ul" only (not "approaching_ul") -- the
+  // brief named exactly 4 fields (criticalCount/lowCount/metCount/
+  // overULCount) with no separate approaching/approachingULCount fields, so
+  // this stays literal to that rather than inventing extra counts.
+  //
+  // topDeficiencies: the 3 lowest-percentOfRDA entries with status
+  // "critical"; if fewer than 3 criticals exist, the remainder is filled
+  // with "low" entries (also lowest-percentOfRDA first) so the card isn't
+  // sparse when nothing is severely deficient today.
+  function getMicronutrientSummaryForCard() {
+    var rows = getMicronutrientStatus(todayKey());
+
+    var criticalCount = rows.filter(function (r) { return r.status === "critical"; }).length;
+    var lowCount = rows.filter(function (r) { return r.status === "low"; }).length;
+    var metCount = rows.filter(function (r) { return r.status === "met"; }).length;
+    var overULCount = rows.filter(function (r) { return r.status === "over_ul"; }).length;
+
+    var byPercentAsc = function (a, b) { return (a.percentOfRDA || 0) - (b.percentOfRDA || 0); };
+    var criticals = rows.filter(function (r) { return r.status === "critical"; }).sort(byPercentAsc);
+    var lows = rows.filter(function (r) { return r.status === "low"; }).sort(byPercentAsc);
+    var topDeficiencies = criticals.concat(lows).slice(0, 3).map(function (r) {
+      return { displayName: r.displayName, percentOfRDA: r.percentOfRDA, status: r.status };
+    });
+
+    return {
+      criticalCount: criticalCount,
+      lowCount: lowCount,
+      metCount: metCount,
+      overULCount: overULCount,
+      topDeficiencies: topDeficiencies
+    };
   }
 
   // ---------- rendering ----------
@@ -1817,6 +2066,7 @@
       .then(renderAll);
 
     loadVitamins();
+    loadRdas();
 
     // render immediately with whatever we have (custom foods / log), then again once fetch resolves
     renderAll();
