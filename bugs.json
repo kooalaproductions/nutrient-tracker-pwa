@@ -1,1 +1,28 @@
-[]
+[
+  {
+    "id": "bug_001",
+    "date": "2026-08-05",
+    "severity": "warning",
+    "status": "open",
+    "area": "persistence",
+    "title": "Backup export/import omits profile, goals, and display prefs",
+    "description": "exportAllDataAsJSON() (index.html, function starting ~line 1562) only writes state.logEntries and state.customFoods into the backup payload. It does not include state.profile, state.goals, or state.displayPrefs, even though these are all persisted separately in localStorage (STORAGE_PROFILE = \"nt_profile\", STORAGE_GOALS = \"nt_goals\", STORAGE_DISPLAY_PREFS = \"nt_displayPrefs\", declared at lines 556-558) and represent real user-facing features: the onboarding profile (weight/height/age/sex/activity/goal used by calculateGoals()) and the Settings screen's per-nutrient goal overrides and 'show on totals card' display toggles. The matching import handler (the importFile 'change' listener, ~line 1622) only reads data.logEntries and data.customFoods back out, so it can't restore these fields even if they were present. A code comment directly above exportAllDataAsJSON() (~line 1567-1569) says 'there's no settings-backed state anywhere in this app yet (only nt_customFoods and nt_logEntries exist in localStorage)' -- this is now stale/incorrect since nt_profile, nt_goals, and nt_displayPrefs were added in a later feature pass and the export/import code was never updated to match. Net effect: a user who downloads a backup and restores it on a new device (or after clearing site data) silently loses their onboarding profile and any custom goal/display-preference customizations, while food log and custom foods survive intact.",
+    "foundBy": "qa-reviewer",
+    "fixedBy": null,
+    "fixedDate": null,
+    "fixNotes": null
+  },
+  {
+    "id": "bug_002",
+    "date": "2026-08-05",
+    "severity": "warning",
+    "status": "open",
+    "area": "data",
+    "title": "foods.json: 20 items missing required 'category' field",
+    "description": "The first 20 entries in foods.json (the original generic food set, ids: chicken-breast, brown-rice, egg, greek-yogurt, banana, apple, almonds, peanut-butter, oatmeal, salmon, broccoli, sweet-potato, whole-milk, white-bread, avocado, ground-beef, black-beans, cheddar-cheese, spinach, orange-juice) have no 'category' field, while all 48 items added afterward (the Kirkland/branded set, ids starting at 'kirkland-smoked-salmon' onward) do include one (e.g. \"category\": \"protein\", \"fruit\", \"beverage\", etc). This is schema drift introduced when the food list grew from 20 to 68 items across several separate additions -- the newer entries adopted a field the original set never had. Currently low-impact since index.html's JS never reads a food item's .category (renderFoodList() only uses f.name, f.brand, f.servingSize, f.servingUnit, f.calories, f.custom -- grep confirms the only '.category' usage in the whole file is for vitamins.json grouping, not foods.json), so nothing breaks today. But it violates the qa-reviewer data-integrity checklist requirement that every food item have an id/name/category/calories/macros, and any future feature that groups or filters the food list by category (a natural extension given vitamins.json already supports it) would silently misbehave for these 20 items.",
+    "foundBy": "qa-reviewer",
+    "fixedBy": null,
+    "fixedDate": null,
+    "fixNotes": null
+  }
+]
