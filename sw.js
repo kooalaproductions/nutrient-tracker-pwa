@@ -1,6 +1,6 @@
 "use strict";
 
-var CACHE_NAME = "nutrient-tracker-v3";
+var CACHE_NAME = "nutrient-tracker-v4";
 var PRECACHE_URLS = [
   "./",
   "./index.html",
