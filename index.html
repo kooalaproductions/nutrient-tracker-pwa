@@ -1400,8 +1400,13 @@
       ? fmt(r.consumed) + unitSuffix
       : fmt(r.consumed) + " / " + fmt(r.goal) + unitSuffix;
 
-    // Per-nutrient accent color for this tile's value text + progress bar.
-    // Calories keeps the app's original --accent green (headline metric).
+    // Per-nutrient identity color -- kept on the VALUE TEXT only (the bar
+    // below uses a separate STATUS color instead; see barColor). This way
+    // protein/carbs/fat/sugar/fiber/sodium tiles are still distinguishable
+    // from each other at a glance by their number color, the same as before
+    // this change, while the bar's color now communicates progress instead
+    // of nutrient identity. Calories keeps the app's original --accent green
+    // (headline metric).
     var NUTRIENT_TILE_COLORS = {
       protein_g: "var(--nutrient-protein)",
       carbs_g: "var(--nutrient-carbs)",
@@ -1412,6 +1417,18 @@
     };
     var tileColor = isCalories ? "var(--accent)" : (NUTRIENT_TILE_COLORS[r.key] || "var(--accent)");
 
+    // Status colors for the progress BAR -- intentionally the same literal
+    // values as MICRO_STATUS_COLORS (critical/low/met/approaching_ul/over_ul,
+    // defined further down near renderMicroView()) rather than a reference to
+    // that object, so this tile-rendering function has no load-order
+    // dependency on the micronutrient section of the file. Kept in sync by
+    // convention: if MICRO_STATUS_COLORS values ever change, update both so
+    // "red/amber/green" keeps meaning the same thing everywhere in the app.
+    var STATUS_RED = "var(--danger)";
+    var STATUS_AMBER = "#FFC107";
+    var STATUS_GREEN = "var(--accent)";
+    var STATUS_APPROACHING_LIMIT = "#FF9800";
+
     var subHtml = "";
     var barHtml = "";
     if (r.goal != null) {
@@ -1419,21 +1436,41 @@
       // Fill % toward goal; guard against a zero/invalid goal so this never
       // produces NaN/Infinity width.
       var pct = r.goal > 0 ? Math.min(100, (r.consumed / r.goal) * 100) : (r.consumed > 0 ? 100 : 0);
-      var barColor = tileColor;
+      var barColor;
       if (r.direction === "max") {
+        // "max" tiles (sugar, sodium) are UPPER LIMITS, not targets to fill
+        // up -- 0% consumed is fine, and the danger zone is being close to or
+        // over the limit. This is the inverse of the target/min case below,
+        // and deliberately mirrors the micro view's approaching_ul/over_ul
+        // treatment of the exact same concept: green while there's plenty of
+        // headroom, amber once within 25% of the limit, red at/over it.
         subHtml = r.consumed > r.goal
           ? '<div class="sub danger">' + fmt(r.consumed - r.goal) + unitSuffix + ' over limit</div>'
           : '<div class="sub">' + fmt(remaining) + unitSuffix + ' left before limit</div>';
         if (r.consumed > r.goal) {
           pct = 100;
-          barColor = "var(--danger)";
+          barColor = STATUS_RED;
+        } else if (pct >= 75) {
+          barColor = STATUS_APPROACHING_LIMIT;
+        } else {
+          barColor = STATUS_GREEN;
         }
       } else {
         // "target" (calories/protein/carbs/fat) and "min" (fiber) both read
-        // as "X left" until met, then "Goal reached".
+        // as "X left" until met, then "Goal reached". More consumed = closer
+        // to a good outcome here, so low % is the concern: red under 25%,
+        // amber 25-75%, green above 75% (matches the user's literal ask, and
+        // the critical/low/met bucketing already used on the micro view).
         subHtml = remaining <= 0
           ? '<div class="sub">Goal reached</div>'
           : '<div class="sub">' + fmt(remaining) + unitSuffix + ' left</div>';
+        if (pct < 25) {
+          barColor = STATUS_RED;
+        } else if (pct < 75) {
+          barColor = STATUS_AMBER;
+        } else {
+          barColor = STATUS_GREEN;
+        }
       }
       barHtml = '<div class="stat-bar-track"><div class="stat-bar-fill" style="width:' + Math.round(pct) + '%; background:' + barColor + ';"></div></div>';
     }
