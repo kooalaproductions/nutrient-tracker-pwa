@@ -362,6 +362,28 @@
      and a static distinct treatment is enough to flag it without adding a
      new animation primitive for one badge state. */
   .micro-row-over-ul { box-shadow: inset 3px 0 0 var(--danger); padding-left: 8px; }
+
+  /* per-row expandable contributor breakdown (native <details>/<summary> --
+     see microRowHtml() comment for why this uses <details> instead of the
+     .toggle-row + addEventListener pattern used for one-off toggles) */
+  .micro-contributors { margin-top: 6px; }
+  .micro-contributors summary { list-style: none; cursor: pointer; }
+  .micro-contributors summary::-webkit-details-marker { display: none; }
+  .micro-contributors-toggle {
+    display: flex; justify-content: space-between; align-items: center;
+    min-height: 44px; padding: 4px 0;
+    font-size: 12.5px; font-weight: 600; color: var(--text-secondary);
+  }
+  .micro-contributors-toggle .chevron { transition: transform 0.15s; }
+  .micro-contributors[open] .micro-contributors-toggle .chevron { transform: rotate(180deg); }
+  .micro-contributors-list { display: flex; flex-direction: column; gap: 4px; padding: 2px 0 4px; }
+  .micro-contributor-item {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+    font-size: 11.5px; color: var(--text-secondary);
+  }
+  .micro-contributor-name { flex: 1; min-width: 0; overflow-wrap: break-word; }
+  .micro-contributor-amount { flex: 0 0 auto; white-space: nowrap; }
+  .micro-contributor-brand { font-size: 10.5px; opacity: 0.8; }
 </style>
 </head>
 <body>
@@ -1160,6 +1182,34 @@
     return totals;
   }
 
+  // Per-entry breakdown for a single micronutrient key on dateString --
+  // complements getDailyFoodMicronutrientTotals() / getDailySupplementMicronutrientTotals()
+  // (which only return the aggregate food-vs-supplement totals) by exposing
+  // exactly which logged items contributed to that total and how much each
+  // one contributed. Intended for a future expandable micronutrient row UI
+  // ("this 422mg of potassium today came from: banana 300mg, ...").
+  //
+  // Uses the same entry[key] * entry.multiplier math and the same "food
+  // entries have no type field, supplement entries are type: 'supplement'"
+  // convention documented at logSupplement() (see above) that the three
+  // total functions above already rely on.
+  function getMicronutrientContributors(dateString, key) {
+    var entries = state.logEntries[dateString] || [];
+    var contributors = entries
+      .filter(function (e) { return e[key] != null; })
+      .map(function (e) {
+        var isSupplement = e.type === "supplement";
+        return {
+          name: isSupplement ? e.itemName : e.name,
+          brand: e.brand || "",
+          type: isSupplement ? "supplement" : "food",
+          amount: Number(e[key]) * e.multiplier
+        };
+      });
+    contributors.sort(function (a, b) { return b.amount - a.amount; });
+    return contributors;
+  }
+
   // One row per micronutrient present in dateString's totals (i.e. present in
   // at least one logged food or supplement entry today), for a future
   // micronutrient-status UI to render.
@@ -1627,6 +1677,39 @@
       sourceHtml = '<div class="micro-source-breakdown">🥗 ' + fmt(row.fromFood) + row.unit +
         '  💊 ' + fmt(row.fromSupplements) + row.unit + '</div>';
     }
+    // Expandable per-item breakdown ("this total came from: banana 422mg,
+    // multivitamin 45mg, ..."). Uses native <details>/<summary> rather than
+    // the .toggle-row + addEventListener pattern used elsewhere (e.g.
+    // #addFoodToggle) because this markup is regenerated via innerHTML on
+    // every renderMicroView() call for potentially dozens of rows at once --
+    // <details> needs no JS re-wiring after each re-render and is free
+    // keyboard/screen-reader accessible. Guarded on contributors.length so
+    // rows with nothing logged (shouldn't occur here, but defensive) and
+    // microNoDataRowHtml() rows (which never set row.contributors at all)
+    // never render an empty, useless toggle.
+    var contributorsHtml = "";
+    if (row.contributors && row.contributors.length > 0) {
+      var count = row.contributors.length;
+      var toggleLabel = "Show " + count + " item" + (count === 1 ? "" : "s");
+      var itemsHtml = row.contributors.map(function (c) {
+        var icon = c.type === "supplement" ? "💊" : "🥗";
+        var brandHtml = c.brand ? ' <span class="micro-contributor-brand">(' + escapeHtml(c.brand) + ')</span>' : "";
+        return (
+          '<div class="micro-contributor-item">' +
+            '<span class="micro-contributor-name">' + icon + ' ' + escapeHtml(c.name) + brandHtml + '</span>' +
+            '<span class="micro-contributor-amount">' + fmt(c.amount) + row.unit + '</span>' +
+          '</div>'
+        );
+      }).join("");
+      contributorsHtml =
+        '<details class="micro-contributors">' +
+          '<summary class="micro-contributors-toggle">' +
+            '<span>' + toggleLabel + '</span>' +
+            '<span class="chevron">▾</span>' +
+          '</summary>' +
+          '<div class="micro-contributors-list">' + itemsHtml + '</div>' +
+        '</details>';
+    }
     var rowClass = "micro-row" + (row.status === "over_ul" ? " micro-row-over-ul" : "");
     return (
       '<div class="' + rowClass + '">' +
@@ -1637,6 +1720,7 @@
         barHtml +
         pctHtml +
         sourceHtml +
+        contributorsHtml +
       '</div>'
     );
   }
@@ -1677,7 +1761,13 @@
 
     var rows = getMicronutrientStatus(todayKey());
     var rowsByKey = {};
-    rows.forEach(function (r) { rowsByKey[r.key] = r; });
+    rows.forEach(function (r) {
+      // Attach today's per-entry breakdown (which foods/supplements
+      // contributed and how much) so microRowHtml() can render an
+      // expandable "Show N item(s)" detail without a second data pass.
+      r.contributors = getMicronutrientContributors(todayKey(), r.key);
+      rowsByKey[r.key] = r;
+    });
 
     document.getElementById("microVitaminsList").innerHTML = microSectionHtml(MICRO_VITAMIN_KEYS, rowsByKey);
     document.getElementById("microMineralsList").innerHTML = microSectionHtml(MICRO_MINERAL_KEYS, rowsByKey);

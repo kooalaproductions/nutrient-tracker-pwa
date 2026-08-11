@@ -65,5 +65,31 @@
     "fixedBy": "bug-fixer",
     "fixedDate": "2026-08-06",
     "fixNotes": "logSupplement() now snapshots entry.multiplier (dose/commonDose) and entry[vitamin.nutrientKey] (amountPerDose * conversionFactor) onto each supplement log entry, mirroring addLogEntry()'s food snapshot pattern; getDailyMicronutrientTotals() no longer skips type===\"supplement\" entries so they flow through the same MICRONUTRIENT_KEYS summation loop as food; added getDailySupplementMicronutrientTotals() to sum only supplement-sourced contributions; and getMicronutrientStatus() now checks the upper limit for supplement-only-UL nutrients (magnesium, niacin, folate, vitamin E) against that supplement-only total instead of skipping the check entirely, while all other nutrients keep checking the combined food+supplement total."
+  },
+  {
+    "id": "bug_006",
+    "date": "2026-08-10",
+    "severity": "warning",
+    "status": "fixed",
+    "area": "ui",
+    "title": "Micronutrient contributor toggle below touch target minimum",
+    "description": "In the new micronutrient detail view (#microView), each micronutrient row can be expanded via a <details>/<summary> element to show which foods/supplements contributed to that nutrient total (microRowHtml(), index.html line 1655-1724). The .micro-contributors-toggle summary element (CSS line 372-376) uses min-height: 32px with padding: 4px 0, resulting in an effective touch target height of 40px (32 + 4 + 4). This falls short of the app established touch target standard of 44px, used throughout for interactive elements (button.remove-btn min-height: 44px line 141, .check-row min-height: 44px line 180, .cal-nav-btn width/height: 44px lines 255-256, etc.). On mobile devices (iPhone SE 375px, iPhone 14 390px), users may experience difficulty reliably tapping the toggle to expand/collapse the contributor list.",
+    "foundBy": "qa-reviewer",
+    "fixedBy": "claude",
+    "fixedDate": "2026-08-10",
+    "fixNotes": ".micro-contributors-toggle min-height changed from 32px to 44px, matching the app-wide touch-target convention already used by .remove-btn/.check-row/.cal-nav-btn."
+  },
+  {
+    "id": "bug_007",
+    "date": "2026-08-10",
+    "severity": "warning",
+    "status": "fixed",
+    "area": "ui",
+    "title": "Contributor item names may overflow on narrow viewports",
+    "description": "In the expanded micronutrient contributor list (microRowHtml() contributor rendering, index.html line 1692-1700), each item is a flex row (.micro-contributor-item, CSS line 380-383) with layout: display: flex; justify-content: space-between; align-items: baseline; gap: 10px. The first child (a span containing icon + food/supplement name + brand) has NO flex: 1; min-width: 0 CSS properties. Without min-width: 0, the flex item won not shrink below its content natural width, preventing text wrapping when space-between pushes the amount (second span) to the right. Risk: on narrow viewports (iPhone SE 375px, iPhone 14 390px), if a food name is long, the name span will overflow horizontally instead of wrapping, breaking the layout. Comparison: .log-entry-info (similar flex space-between layout, line 129-131) correctly uses flex: 1; min-width: 0 to enable text wrapping.",
+    "foundBy": "qa-reviewer",
+    "fixedBy": "claude",
+    "fixedDate": "2026-08-10",
+    "fixNotes": "Gave the contributor name span its own .micro-contributor-name class (flex: 1; min-width: 0; overflow-wrap: break-word) and the amount span .micro-contributor-amount (flex: 0 0 auto; white-space: nowrap), matching the .log-entry-info flex:1/min-width:0 pattern already used elsewhere for the same space-between-with-long-text layout. Long names now wrap instead of overflowing; the amount stays fixed on the right."
   }
 ]
