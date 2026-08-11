@@ -21,7 +21,8 @@
     "vitaminb12_mcg": 0.3,
     "phosphorus_mg": 200,
     "brand": "Generic",
-    "category": "protein"
+    "category": "protein",
+    "gramsPerServing": 100
   },
   {
     "id": "brown-rice",
@@ -46,7 +47,8 @@
     "folate_mcg": 24,
     "phosphorus_mg": 150,
     "brand": "Generic",
-    "category": "grain"
+    "category": "grain",
+    "gramsPerServing": 195
   },
   {
     "id": "egg",
@@ -72,7 +74,8 @@
     "cholesterol_mg": 186,
     "phosphorus_mg": 99,
     "brand": "Generic",
-    "category": "protein"
+    "category": "protein",
+    "gramsPerServing": 50
   },
   {
     "id": "greek-yogurt",
@@ -95,7 +98,8 @@
     "selenium_mcg": 15,
     "phosphorus_mg": 230,
     "brand": "Generic",
-    "category": "dairy"
+    "category": "dairy",
+    "gramsPerServing": 170
   },
   {
     "id": "banana",
@@ -116,7 +120,8 @@
     "folate_mcg": 24,
     "vitaminc_mg": 10,
     "brand": "Generic",
-    "category": "fruit"
+    "category": "fruit",
+    "gramsPerServing": 118
   },
   {
     "id": "apple",
@@ -136,7 +141,8 @@
     "manganese_mg": 0.07,
     "folate_mcg": 5,
     "brand": "Generic",
-    "category": "fruit"
+    "category": "fruit",
+    "gramsPerServing": 182
   },
   {
     "id": "almonds",
@@ -160,7 +166,8 @@
     "folate_mcg": 27,
     "vitamine_mg": 8.2,
     "brand": "Generic",
-    "category": "fat"
+    "category": "fat",
+    "gramsPerServing": 28
   },
   {
     "id": "peanut-butter",
@@ -183,7 +190,8 @@
     "folate_mcg": 26,
     "iron_mg": 0.6,
     "brand": "Generic",
-    "category": "fat"
+    "category": "fat",
+    "gramsPerServing": 32
   },
   {
     "id": "oatmeal",
@@ -206,7 +214,8 @@
     "folate_mcg": 27,
     "phosphorus_mg": 162,
     "brand": "Generic",
-    "category": "grain"
+    "category": "grain",
+    "gramsPerServing": 234
   },
   {
     "id": "salmon",
@@ -232,7 +241,8 @@
     "vitamind_mcg": 13,
     "omega3_mg": 2000,
     "brand": "Generic",
-    "category": "protein"
+    "category": "protein",
+    "gramsPerServing": 100
   },
   {
     "id": "broccoli",
@@ -256,7 +266,8 @@
     "folate_mcg": 136,
     "vitamina_mcg": 538,
     "brand": "Generic",
-    "category": "vegetable"
+    "category": "vegetable",
+    "gramsPerServing": 156
   },
   {
     "id": "sweet-potato",
@@ -276,7 +287,8 @@
     "vitaminc_mg": 20,
     "vitamina_mcg": 961,
     "brand": "Generic",
-    "category": "vegetable"
+    "category": "vegetable",
+    "gramsPerServing": 103
   },
   {
     "id": "whole-milk",
@@ -300,7 +312,8 @@
     "vitamina_mcg": 140,
     "phosphorus_mg": 220,
     "brand": "Generic",
-    "category": "dairy"
+    "category": "dairy",
+    "gramsPerServing": 244
   },
   {
     "id": "white-bread",
@@ -320,7 +333,8 @@
     "thiamin_mg": 0.13,
     "folate_mcg": 28,
     "brand": "Generic",
-    "category": "grain"
+    "category": "grain",
+    "gramsPerServing": 26
   },
   {
     "id": "avocado",
@@ -341,7 +355,8 @@
     "folate_mcg": 55,
     "vitamina_mcg": 5,
     "brand": "Generic",
-    "category": "fat"
+    "category": "fat",
+    "gramsPerServing": 68
   },
   {
     "id": "ground-beef",
@@ -367,7 +382,8 @@
     "cholesterol_mg": 90,
     "phosphorus_mg": 210,
     "brand": "Generic",
-    "category": "protein"
+    "category": "protein",
+    "gramsPerServing": 100
   },
   {
     "id": "black-beans",
@@ -390,7 +406,8 @@
     "calcium_mg": 46,
     "phosphorus_mg": 240,
     "brand": "Generic",
-    "category": "vegetable"
+    "category": "vegetable",
+    "gramsPerServing": 172
   },
   {
     "id": "cheddar-cheese",
@@ -414,7 +431,8 @@
     "vitamina_mcg": 86,
     "cholesterol_mg": 29,
     "brand": "Generic",
-    "category": "dairy"
+    "category": "dairy",
+    "gramsPerServing": 28
   },
   {
     "id": "spinach",
@@ -438,7 +456,8 @@
     "vitaminc_mg": 5,
     "manganese_mg": 0.54,
     "brand": "Generic",
-    "category": "vegetable"
+    "category": "vegetable",
+    "gramsPerServing": 60
   },
   {
     "id": "orange-juice",
@@ -458,7 +477,8 @@
     "calcium_mg": 27,
     "magnesium_mg": 12,
     "brand": "Generic",
-    "category": "beverage"
+    "category": "beverage",
+    "gramsPerServing": 240
   },
   {
     "id": "kirkland-smoked-salmon",
@@ -474,7 +494,8 @@
     "sodium_mg": 630,
     "omega3_mg": 1000,
     "brand": "Kirkland Signature",
-    "category": "protein"
+    "category": "protein",
+    "gramsPerServing": 56
   },
   {
     "id": "kirkland-cooked-shrimp",
@@ -490,7 +511,8 @@
     "sodium_mg": 230,
     "cholesterol_mg": 170,
     "brand": "Kirkland Signature",
-    "category": "protein"
+    "category": "protein",
+    "gramsPerServing": 85
   },
   {
     "id": "kirkland-turkey-breast",
@@ -505,7 +527,8 @@
     "fiber_g": 0,
     "sodium_mg": 460,
     "brand": "Kirkland Signature",
-    "category": "protein"
+    "category": "protein",
+    "gramsPerServing": 56
   },
   {
     "id": "kirkland-chicken-bone-broth",
@@ -520,7 +543,8 @@
     "fiber_g": 0,
     "sodium_mg": 95,
     "brand": "Kirkland Signature",
-    "category": "protein"
+    "category": "protein",
+    "gramsPerServing": 240
   },
   {
     "id": "kirkland-hard-boiled-eggs",
@@ -536,7 +560,8 @@
     "sodium_mg": 60,
     "cholesterol_mg": 165,
     "brand": "Kirkland Signature",
-    "category": "protein"
+    "category": "protein",
+    "gramsPerServing": 44
   },
   {
     "id": "kirkland-egg-bites-bacon-gouda",
@@ -553,7 +578,8 @@
     "cholesterol_mg": 200,
     "saturatedfat_g": 9,
     "brand": "Kirkland Signature",
-    "category": "protein"
+    "category": "protein",
+    "gramsPerServing": 119
   },
   {
     "id": "kirkland-organic-almond-butter",
@@ -568,7 +594,8 @@
     "fiber_g": 3,
     "sodium_mg": 0,
     "brand": "Kirkland Signature",
-    "category": "fat"
+    "category": "fat",
+    "gramsPerServing": 32
   },
   {
     "id": "kirkland-coconut-oil",
@@ -584,7 +611,8 @@
     "sodium_mg": 0,
     "saturatedfat_g": 13,
     "brand": "Kirkland Signature",
-    "category": "fat"
+    "category": "fat",
+    "gramsPerServing": 14
   },
   {
     "id": "kirkland-avocado-oil",
@@ -600,7 +628,8 @@
     "sodium_mg": 0,
     "vitamine_mg": 1.8,
     "brand": "Kirkland Signature",
-    "category": "fat"
+    "category": "fat",
+    "gramsPerServing": 13
   },
   {
     "id": "kirkland-frozen-wild-blueberries",
@@ -617,7 +646,8 @@
     "brand": "Kirkland Signature",
     "category": "fruit",
     "vitaminc_mg": 14,
-    "notes": "High in antioxidants (anthocyanins)."
+    "notes": "High in antioxidants (anthocyanins).",
+    "gramsPerServing": 148
   },
   {
     "id": "kirkland-frozen-strawberries",
@@ -633,7 +663,8 @@
     "sodium_mg": 0,
     "brand": "Kirkland Signature",
     "category": "fruit",
-    "vitaminc_mg": 85
+    "vitaminc_mg": 85,
+    "gramsPerServing": 152
   },
   {
     "id": "kirkland-organic-frozen-acai",
@@ -649,7 +680,8 @@
     "sodium_mg": 10,
     "brand": "Kirkland Signature",
     "category": "fruit",
-    "notes": "UNVERIFIED: no current Kirkland Signature-branded frozen acai product could be confirmed via Costco or label databases. Costco's acai items (food-court bowls, freezer packets) are Sambazon- or Tattooed Chef-branded, not Kirkland Signature. Values are unverified estimates -- treat with low confidence until a real SKU is found."
+    "notes": "UNVERIFIED: no current Kirkland Signature-branded frozen acai product could be confirmed via Costco or label databases. Costco's acai items (food-court bowls, freezer packets) are Sambazon- or Tattooed Chef-branded, not Kirkland Signature. Values are unverified estimates -- treat with low confidence until a real SKU is found.",
+    "gramsPerServing": 100
   },
   {
     "id": "kirkland-frozen-stir-fry-vegetables",
@@ -665,7 +697,8 @@
     "sodium_mg": 15,
     "brand": "Kirkland Signature",
     "category": "vegetable",
-    "notes": "Blend of broccoli, sugar snap peas, green beans, yellow and orange carrots, mushrooms, red bell peppers, water chestnuts, and onions."
+    "notes": "Blend of broccoli, sugar snap peas, green beans, yellow and orange carrots, mushrooms, red bell peppers, water chestnuts, and onions.",
+    "gramsPerServing": 85
   },
   {
     "id": "kirkland-frozen-edamame",
@@ -680,7 +713,8 @@
     "fiber_g": 4,
     "sodium_mg": 0,
     "brand": "Kirkland Signature",
-    "category": "vegetable"
+    "category": "vegetable",
+    "gramsPerServing": 75
   },
   {
     "id": "kirkland-hummus",
@@ -695,7 +729,8 @@
     "fiber_g": 1,
     "sodium_mg": 115,
     "brand": "Kirkland Signature",
-    "category": "snack"
+    "category": "snack",
+    "gramsPerServing": 28
   },
   {
     "id": "kirkland-organic-salsa",
@@ -710,7 +745,8 @@
     "fiber_g": 0,
     "sodium_mg": 120,
     "brand": "Kirkland Signature",
-    "category": "snack"
+    "category": "snack",
+    "gramsPerServing": 30
   },
   {
     "id": "kirkland-tortilla-chips",
@@ -725,7 +761,8 @@
     "fiber_g": 1,
     "sodium_mg": 115,
     "brand": "Kirkland Signature",
-    "category": "snack"
+    "category": "snack",
+    "gramsPerServing": 28
   },
   {
     "id": "kirkland-cold-brew-coffee",
@@ -742,7 +779,8 @@
     "caffeine_mg": 225,
     "brand": "Kirkland Signature",
     "category": "beverage",
-    "notes": "Unsweetened black cold brew, no added sugar/creamer. Corrected against label data from multiple independent nutrition databases: calories 30->15, carbs 7g->3g, sugar 6g->0g, protein 1g->0g, sodium 10mg->0mg, caffeine ~150mg->225mg."
+    "notes": "Unsweetened black cold brew, no added sugar/creamer. Corrected against label data from multiple independent nutrition databases: calories 30->15, carbs 7g->3g, sugar 6g->0g, protein 1g->0g, sodium 10mg->0mg, caffeine ~150mg->225mg.",
+    "gramsPerServing": 325
   },
   {
     "id": "kirkland-protein-shake-chocolate",
@@ -758,7 +796,8 @@
     "sodium_mg": 230,
     "brand": "Kirkland Signature",
     "category": "beverage",
-    "notes": "Verified as a genuine Kirkland Signature-branded ready-to-drink milk-protein shake, not a rebrand of Premier Protein (both are distinct, competing products sold at Costco). Confirmed sold at Costco Canada (18 x 325mL) as of early 2026; US availability unconfirmed. Corrected fat 3g->2.5g and carbs 8g->5g against two independent sources. Fiber and sodium could not be verified against a full label and are carried through as estimates."
+    "notes": "Verified as a genuine Kirkland Signature-branded ready-to-drink milk-protein shake, not a rebrand of Premier Protein (both are distinct, competing products sold at Costco). Confirmed sold at Costco Canada (18 x 325mL) as of early 2026; US availability unconfirmed. Corrected fat 3g->2.5g and carbs 8g->5g against two independent sources. Fiber and sodium could not be verified against a full label and are carried through as estimates.",
+    "gramsPerServing": 341
   },
   {
     "id": "kirkland-green-tea",
@@ -775,7 +814,8 @@
     "caffeine_mg": 30,
     "brand": "Kirkland Signature",
     "category": "beverage",
-    "notes": "Contains EGCG and other catechin antioxidants. Caffeine figure (~30mg/bottle) is an estimate; sources cite roughly 20-50mg per 8oz serving of Kirkland green tea, so a 16oz bottle could run higher (40-90mg) -- not a confirmed label value. Note Costco's most prominent bottled Kirkland green tea line is actually 'Diet Green Tea' (sweetened with sucralose/acesulfame-K, ~65mg sodium); this entry assumes the plain unsweetened variant per spec."
+    "notes": "Contains EGCG and other catechin antioxidants. Caffeine figure (~30mg/bottle) is an estimate; sources cite roughly 20-50mg per 8oz serving of Kirkland green tea, so a 16oz bottle could run higher (40-90mg) -- not a confirmed label value. Note Costco's most prominent bottled Kirkland green tea line is actually 'Diet Green Tea' (sweetened with sucralose/acesulfame-K, ~65mg sodium); this entry assumes the plain unsweetened variant per spec.",
+    "gramsPerServing": 473
   },
   {
     "id": "kirkland-orange-juice",
@@ -793,7 +833,8 @@
     "potassium_mg": 450,
     "brand": "Kirkland Signature",
     "category": "beverage",
-    "notes": "Values confirmed consistent with independent nutrition databases; no corrections needed."
+    "notes": "Values confirmed consistent with independent nutrition databases; no corrections needed.",
+    "gramsPerServing": 248
   },
   {
     "id": "kirkland-chocolate-milk",
@@ -811,7 +852,8 @@
     "potassium_mg": 376,
     "brand": "Kirkland Signature",
     "category": "beverage",
-    "notes": "The only real Kirkland Signature chocolate milk product found is the Organic 2% Reduced Fat Chocolate Milk sold in 8.25 fl oz single-serve cartons (24-ct); no conventional whole-milk jug/gallon chocolate milk was found under this brand. Corrected against the actual label: calories 200->160, carbs 32g->21g, sugar 29g->19g, sodium 190mg->130mg, calcium 280mg->325mg."
+    "notes": "The only real Kirkland Signature chocolate milk product found is the Organic 2% Reduced Fat Chocolate Milk sold in 8.25 fl oz single-serve cartons (24-ct); no conventional whole-milk jug/gallon chocolate milk was found under this brand. Corrected against the actual label: calories 200->160, carbs 32g->21g, sugar 29g->19g, sodium 190mg->130mg, calcium 280mg->325mg.",
+    "gramsPerServing": 251
   },
   {
     "id": "kirkland-protein-bar-peanut-butter-chocolate-chip",
@@ -829,7 +871,8 @@
     "potassium_mg": 150,
     "brand": "Kirkland Signature",
     "category": "snack",
-    "notes": "Category corrected from 'beverage' to 'snack' -- this is a solid chewy bar, not a drink. Chose 'snack' over 'protein' because this schema's category field describes food form/occasion (meal/snack/beverage), and 'protein' is a macro emphasis, not a consistent value on that axis. Confirmed genuine product: 'Kirkland Signature Chewy Protein Bar, 10g Protein, Peanut Butter & Semisweet Chocolate Chip' (42-ct box). Nutrition corrected against the label: fat 9g->11g, carbs 21g->16g, fiber 1g->6g, sugar 9g->6g, sodium 170mg->120mg. A separate, higher-protein Kirkland bar ('Chocolate Peanut Butter Chunk', ~22g protein, ~210 cal) also exists -- do not confuse the two."
+    "notes": "Category corrected from 'beverage' to 'snack' -- this is a solid chewy bar, not a drink. Chose 'snack' over 'protein' because this schema's category field describes food form/occasion (meal/snack/beverage), and 'protein' is a macro emphasis, not a consistent value on that axis. Confirmed genuine product: 'Kirkland Signature Chewy Protein Bar, 10g Protein, Peanut Butter & Semisweet Chocolate Chip' (42-ct box). Nutrition corrected against the label: fat 9g->11g, carbs 21g->16g, fiber 1g->6g, sugar 9g->6g, sodium 170mg->120mg. A separate, higher-protein Kirkland bar ('Chocolate Peanut Butter Chunk', ~22g protein, ~210 cal) also exists -- do not confuse the two.",
+    "gramsPerServing": 40
   },
   {
     "id": "water",
@@ -845,7 +888,8 @@
     "sodium_mg": 0,
     "brand": "Generic",
     "category": "beverage",
-    "notes": "Always log water intake. 8 glasses/day recommended."
+    "notes": "Always log water intake. 8 glasses/day recommended.",
+    "gramsPerServing": 237
   },
   {
     "id": "kirkland-medium-roast-coffee",
@@ -863,7 +907,8 @@
     "caffeine_mg": 100,
     "brand": "Kirkland Signature",
     "category": "beverage",
-    "notes": "Black coffee only, no milk/sugar added. ~100-110mg caffeine per cup depending on brew strength; log honey/milk as separate items if added."
+    "notes": "Black coffee only, no milk/sugar added. ~100-110mg caffeine per cup depending on brew strength; log honey/milk as separate items if added.",
+    "gramsPerServing": 240
   },
   {
     "id": "honey-1-tsp",
@@ -879,7 +924,8 @@
     "sodium_mg": 0,
     "potassium_mg": 11,
     "brand": "Generic",
-    "category": "condiment"
+    "category": "condiment",
+    "gramsPerServing": 7
   },
   {
     "id": "honey-1-tbsp",
@@ -895,7 +941,8 @@
     "sodium_mg": 1,
     "potassium_mg": 11,
     "brand": "Generic",
-    "category": "condiment"
+    "category": "condiment",
+    "gramsPerServing": 21
   },
   {
     "id": "kirkland-1-percent-lowfat-milk",
@@ -915,7 +962,8 @@
     "vitamind_mcg": 2.5,
     "vitamina_mcg": 140,
     "brand": "Kirkland Signature",
-    "category": "dairy"
+    "category": "dairy",
+    "gramsPerServing": 247
   },
   {
     "id": "organic-valley-mozzarella-string-cheese",
@@ -933,7 +981,8 @@
     "cholesterol_mg": 20,
     "saturatedfat_g": 3.5,
     "brand": "Organic Valley",
-    "category": "dairy"
+    "category": "dairy",
+    "gramsPerServing": 28
   },
   {
     "id": "zespri-sungold-kiwi-1-fruit",
@@ -953,7 +1002,8 @@
     "vitamine_mg": 1,
     "magnesium_mg": 10,
     "brand": "Zespri",
-    "category": "fruit"
+    "category": "fruit",
+    "gramsPerServing": 81
   },
   {
     "id": "zespri-sungold-kiwi-2-fruits",
@@ -973,7 +1023,8 @@
     "vitamine_mg": 2,
     "magnesium_mg": 20,
     "brand": "Zespri",
-    "category": "fruit"
+    "category": "fruit",
+    "gramsPerServing": 162
   },
   {
     "id": "barebells-chocolate-dough",
@@ -992,7 +1043,8 @@
     "cholesterol_mg": 5,
     "saturatedfat_g": 4,
     "brand": "Barebells",
-    "category": "snack"
+    "category": "snack",
+    "gramsPerServing": 55
   },
   {
     "id": "barebells-caramel-cashew",
@@ -1011,7 +1063,8 @@
     "cholesterol_mg": 5,
     "saturatedfat_g": 3.5,
     "brand": "Barebells",
-    "category": "snack"
+    "category": "snack",
+    "gramsPerServing": 55
   },
   {
     "id": "barebells-cookies-and-cream",
@@ -1030,7 +1083,8 @@
     "cholesterol_mg": 5,
     "saturatedfat_g": 3.5,
     "brand": "Barebells",
-    "category": "snack"
+    "category": "snack",
+    "gramsPerServing": 55
   },
   {
     "id": "kirkland-french-roast-coffee",
@@ -1047,7 +1101,8 @@
     "potassium_mg": 116,
     "caffeine_mg": 85,
     "brand": "Kirkland Signature",
-    "category": "beverage"
+    "category": "beverage",
+    "gramsPerServing": 240
   },
   {
     "id": "kirkland-organic-salted-butter",
@@ -1065,7 +1120,8 @@
     "cholesterol_mg": 30,
     "vitamina_mcg": 100,
     "brand": "Kirkland Signature",
-    "category": "fat"
+    "category": "fat",
+    "gramsPerServing": 14
   },
   {
     "id": "kirkland-organic-21-grain-bread",
@@ -1083,7 +1139,8 @@
     "iron_mg": 1.4,
     "calcium_mg": 40,
     "brand": "Kirkland Signature",
-    "category": "grain"
+    "category": "grain",
+    "gramsPerServing": 56
   },
   {
     "id": "kirkland-organic-baby-carrots",
@@ -1102,7 +1159,8 @@
     "vitaminc_mg": 4.5,
     "vitamink_mcg": 13,
     "brand": "Kirkland Signature",
-    "category": "vegetable"
+    "category": "vegetable",
+    "gramsPerServing": 85
   },
   {
     "id": "kirkland-organic-whole-milk-yogurt-plain",
@@ -1120,7 +1178,8 @@
     "calcium_mg": 300,
     "vitamind_mcg": 2,
     "brand": "Kirkland Signature",
-    "category": "dairy"
+    "category": "dairy",
+    "gramsPerServing": 170
   },
   {
     "id": "kirkland-chicken-bake",
@@ -1139,7 +1198,8 @@
     "cholesterol_mg": 120,
     "brand": "Kirkland Signature",
     "category": "grain",
-    "notes": "Categorized as 'grain' rather than 'snack' or 'protein' -- most of the mass/calories come from the dough wrapper, matching how Costco Food Court Pizza Slice (also dough-based, also containing meat/cheese) is categorized 'grain' in this file."
+    "notes": "Categorized as 'grain' rather than 'snack' or 'protein' -- most of the mass/calories come from the dough wrapper, matching how Costco Food Court Pizza Slice (also dough-based, also containing meat/cheese) is categorized 'grain' in this file.",
+    "gramsPerServing": 312
   },
   {
     "id": "kirkland-organic-diced-tomatoes",
@@ -1157,7 +1217,8 @@
     "vitaminc_mg": 10,
     "vitamina_mcg": 40,
     "brand": "Kirkland Signature",
-    "category": "vegetable"
+    "category": "vegetable",
+    "gramsPerServing": 130
   },
   {
     "id": "kirkland-organic-black-beans",
@@ -1177,7 +1238,8 @@
     "magnesium_mg": 60,
     "brand": "Kirkland Signature",
     "category": "vegetable",
-    "notes": "Not a duplicate of the existing generic 'black-beans' entry (cooked-from-dry, no brand, 227 cal/cup) -- this is a specific Kirkland canned SKU at a different serving size/calorie profile. Categorized 'vegetable' for consistency with how 'kirkland-frozen-edamame' (another legume) is categorized in this file."
+    "notes": "Not a duplicate of the existing generic 'black-beans' entry (cooked-from-dry, no brand, 227 cal/cup) -- this is a specific Kirkland canned SKU at a different serving size/calorie profile. Categorized 'vegetable' for consistency with how 'kirkland-frozen-edamame' (another legume) is categorized in this file.",
+    "gramsPerServing": 130
   },
   {
     "id": "kirkland-organic-brown-rice",
@@ -1196,7 +1258,8 @@
     "magnesium_mg": 84,
     "brand": "Kirkland Signature",
     "category": "grain",
-    "notes": "Not a duplicate of the existing generic 'brown-rice' entry (216 cal/cup, no brand) -- this is a specific Kirkland organic SKU with a distinct nutrition profile (215 cal, plus iron/magnesium data) that a user might specifically choose to log."
+    "notes": "Not a duplicate of the existing generic 'brown-rice' entry (216 cal/cup, no brand) -- this is a specific Kirkland organic SKU with a distinct nutrition profile (215 cal, plus iron/magnesium data) that a user might specifically choose to log.",
+    "gramsPerServing": 195
   },
   {
     "id": "kirkland-organic-extra-firm-tofu",
@@ -1214,7 +1277,8 @@
     "calcium_mg": 200,
     "iron_mg": 1.4,
     "brand": "Kirkland Signature",
-    "category": "protein"
+    "category": "protein",
+    "gramsPerServing": 85
   },
   {
     "id": "kirkland-chicken-salad-rotisserie-style",
@@ -1232,7 +1296,8 @@
     "potassium_mg": 160,
     "cholesterol_mg": 65,
     "brand": "Kirkland Signature",
-    "category": "protein"
+    "category": "protein",
+    "gramsPerServing": 113
   },
   {
     "id": "kirkland-albacore-tuna-salad-pouch",
@@ -1249,7 +1314,8 @@
     "saturatedfat_g": 1,
     "cholesterol_mg": 30,
     "brand": "Kirkland Signature",
-    "category": "protein"
+    "category": "protein",
+    "gramsPerServing": 99
   },
   {
     "id": "costco-food-court-cheese-pizza-slice",
@@ -1268,7 +1334,8 @@
     "calcium_mg": 600,
     "cholesterol_mg": 60,
     "brand": "Costco Food Court",
-    "category": "grain"
+    "category": "grain",
+    "gramsPerServing": 305
   },
   {
     "id": "costco-food-court-hot-dog",
@@ -1286,7 +1353,8 @@
     "potassium_mg": 280,
     "cholesterol_mg": 55,
     "brand": "Costco Food Court",
-    "category": "protein"
+    "category": "protein",
+    "gramsPerServing": 200
   },
   {
     "id": "kirkland-roasted-salted-pistachios",
@@ -1308,7 +1376,8 @@
     "iron_mg": 1.3,
     "phosphorus_mg": 140,
     "brand": "Kirkland Signature",
-    "category": "fat"
+    "category": "fat",
+    "gramsPerServing": 28
   },
   {
     "id": "kirkland-wild-alaskan-sockeye-salmon-canned",
@@ -1329,7 +1398,8 @@
     "calcium_mg": 180,
     "phosphorus_mg": 230,
     "brand": "Kirkland Signature",
-    "category": "protein"
+    "category": "protein",
+    "gramsPerServing": 85
   },
   {
     "id": "lentils-cooked",
@@ -1351,7 +1421,8 @@
     "manganese_mg": 0.49,
     "phosphorus_mg": 356,
     "brand": "Generic",
-    "category": "vegetable"
+    "category": "vegetable",
+    "gramsPerServing": 198
   },
   {
     "id": "kirkland-low-fat-cottage-cheese",
@@ -1374,7 +1445,8 @@
     "magnesium_mg": 12,
     "zinc_mg": 0.5,
     "brand": "Kirkland Signature",
-    "category": "protein"
+    "category": "protein",
+    "gramsPerServing": 113
   },
   {
     "id": "kirkland-organic-quinoa-cooked",
@@ -1396,7 +1468,8 @@
     "phosphorus_mg": 260,
     "iron_mg": 1.5,
     "brand": "Kirkland Signature",
-    "category": "grain"
+    "category": "grain",
+    "gramsPerServing": 185
   },
   {
     "id": "red-bell-pepper",
@@ -1417,6 +1490,7 @@
     "folate_mcg": 55,
     "vitaminb6_mg": 0.2,
     "brand": "Generic",
-    "category": "vegetable"
+    "category": "vegetable",
+    "gramsPerServing": 119
   }
 ]
