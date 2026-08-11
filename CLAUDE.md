@@ -20,6 +20,21 @@ push it to `master` as part of finishing that task, instead of leaving it as an
 uncommitted local edit. This applies to normal user-requested changes — it is
 not standing permission to make unrequested changes on your own initiative.
 
+**Every change goes through the orchestrator pipeline.** Regardless of how the
+request is phrased ("fix X", "add Y", "can you..."), route it through the
+stages documented in `.claude/agents/orchestrator.md` / `PIPELINE.md`: intake
+(assess risk) → plan (check bugs.json/CLAUDE.md for conflicts) → build
+(dispatch the right specialist agent(s), sequentially if they touch shared
+files) → validate (re-read the actual diff yourself — do not trust an agent's
+self-report) → QA (targeted qa-reviewer audit) → bug check (fix anything QA
+flags) → commit → push. This is a process rule for whoever is driving the
+session (there is no requirement that a subagent literally named
+`orchestrator` executes it — that agent's tool grant has no `Agent` tool, so
+it cannot itself dispatch other agents; running its playbook at the top level
+achieves the same result and is the proven path, including catching two real
+bugs at the validate/QA gates in past runs). Skipping stages because a change
+"seems small" is exactly the failure mode this rule exists to prevent.
+
 ## Available Specialist Agents
 
 These agents live in `.claude/agents/` and are auto-available every session.
