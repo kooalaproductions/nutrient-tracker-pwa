@@ -78,14 +78,23 @@ These agents live in `.claude/agents/` and are auto-available every session.
 - [x] index.html — addLogEntry() fixed (bug_003)
       (now copies all 30 micronutrient fields, not just 7 macros)
 - [x] index.html — brand+name search (both fields searched)
+- [x] index.html — supplement → micronutrient wiring, fully complete
+      (vitamins.json nutrientKey/conversionFactor landed with bug_005;
+      this session added getDailyFoodMicronutrientTotals() +
+      fromFood/fromSupplements per-nutrient fields on
+      getMicronutrientStatus() rows, suppContributedToday on
+      getMicronutrientSummaryForCard(), a 🥗/💊 source-breakdown line
+      in #microView, and a 💊+🥗 indicator on the totals-card summary
+      row — closes the gap where D3/fish oil/magnesium supplements
+      didn't visibly affect the micros view)
+- [x] bug_004 — full fix confirmed and documented
+      (magnesium/niacin/folate/vitamin-E upper limits are correctly
+      checked against supplement-only totals, not skipped — fixNotes
+      updated to remove stale "TODO: supplement wiring phase" language)
 
 ### 🔲 Pending (priority order)
 - [ ] iPhone home screen install + real device test
       (Option C — foundation is solid, needs on-device verify)
-- [ ] Supplement → micronutrient wiring
-      (add nutrientKey + nutrientUnit to vitamins.json,
-      update getDailyMicronutrientTotals() to include supplements,
-      closes gap where D3/fish oil/magnesium don't affect micros view)
 - [ ] 17 micronutrient fields need food data backfill
       (thiamin, riboflavin, niacin, B6, B12, choline, selenium,
       zinc, etc. — top priority foods: eggs, salmon, spinach,
@@ -105,12 +114,14 @@ These agents live in `.claude/agents/` and are auto-available every session.
   silently zeroed all 30 micronutrient fields on every log entry
 
 ### Known Gaps (not bugs, design decisions to revisit)
-- Supplement entries in the log don't contribute to micronutrient
-  totals yet (by design — needs nutrientKey wiring first)
-- Magnesium upper limit note (supplements only) logged in rdas.json
-  but not yet enforced differently in UL warning logic
 - QA qa-reviewer audit of micronutrient feature not yet run
   (getUserRDA() key-name match with profile page unverified)
+- vit_005 (B-Complex), vit_019 (Men's Multi), vit_020 (Women's Multi)
+  map nutrientKey to a single headline nutrient (e.g. B-Complex →
+  vitaminb12_mcg) rather than null, since the schema can't represent
+  a multi-ingredient product natively — documented per-entry in
+  vitamins.json notes; means those three log entries only contribute
+  to one tracked micronutrient each, not their full real-world profile
 
 **How to invoke:** Just describe the task and Claude will route to the right agent.
 Or be explicit: "Use the qa-reviewer to check the app" / "Use data-builder to add salmon."
