@@ -50,7 +50,7 @@
     "foundBy": "qa-reviewer",
     "fixedBy": "bug-fixer",
     "fixedDate": "2026-08-06",
-    "fixNotes": "Added isSupplementOnlyUL() helper. Magnesium UL check now skipped in getMicronutrientStatus() since current totals are food-only. TODO comment added for supplement wiring phase."
+    "fixNotes": "Added isSupplementOnlyUL() helper. Magnesium UL check now skipped in getMicronutrientStatus() since current totals are food-only. TODO comment added for supplement wiring phase. FULL FIX LANDED (2026-08-10, via bug_005 + food/supplement breakdown feature): getMicronutrientStatus() now checks isSupplementOnlyUL()-flagged nutrients (magnesium, niacin, folate, vitamin E) against getDailySupplementMicronutrientTotals() specifically, not the combined food+supplement total -- the UL is no longer skipped, it's correctly scoped to supplement-sourced intake only."
   },
   {
     "id": "bug_005",

@@ -348,12 +348,14 @@
   .micro-badge.over-ul { background: var(--danger); color: #fff; }
   .micro-badge.low { background: #FFF3CD; color: #856404; }
   .micro-badge.met { background: var(--accent-light); color: var(--accent); }
+  .micro-badge.info { background: var(--border); color: var(--text-secondary); }
   .micro-row { padding: 9px 0; border-bottom: 1px solid var(--border); }
   .micro-row:last-child { border-bottom: none; }
   .micro-row-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 13.5px; margin-bottom: 4px; }
   .micro-name { font-weight: 600; }
   .micro-amount { color: var(--text-secondary); font-size: 12px; white-space: nowrap; }
   .micro-percent { font-size: 11px; color: var(--text-secondary); margin-top: 3px; }
+  .micro-source-breakdown { font-size: 11px; color: var(--text-secondary); margin-top: 3px; }
   .micro-row-no-data .micro-name, .micro-row-no-data .micro-amount { color: var(--text-secondary); }
   /* over_ul gets a simple static accent bar rather than a new @keyframes
      animation -- no existing @keyframes pattern exists in this file to match,
@@ -1136,6 +1138,28 @@
     return totals;
   }
 
+  // Same as getDailySupplementMicronutrientTotals() but inverted -- restricted
+  // to non-supplement (food) entries only. Food entries have no "type" field
+  // at all (implicit type "food"; see the type-field convention noted at
+  // logSupplement()), so this filters for e.type !== "supplement" rather than
+  // checking for an explicit "food" tag. Used to isolate food-sourced
+  // contributions the same way getDailySupplementMicronutrientTotals()
+  // isolates supplement-sourced ones (e.g. for a food-vs-supplement
+  // breakdown in the micronutrient detail view).
+  function getDailyFoodMicronutrientTotals(dateString) {
+    var entries = state.logEntries[dateString] || [];
+    var totals = {};
+    entries.forEach(function (e) {
+      if (e.type === "supplement") return;
+      MICRONUTRIENT_KEYS.forEach(function (k) {
+        if (e[k] == null) return;
+        if (totals[k] == null) totals[k] = 0;
+        totals[k] += Number(e[k]) * e.multiplier;
+      });
+    });
+    return totals;
+  }
+
   // One row per micronutrient present in dateString's totals (i.e. present in
   // at least one logged food or supplement entry today), for a future
   // micronutrient-status UI to render.
@@ -1186,6 +1210,7 @@
   function getMicronutrientStatus(dateString) {
     var totals = getDailyMicronutrientTotals(dateString);
     var supplementTotals = getDailySupplementMicronutrientTotals(dateString);
+    var foodTotals = getDailyFoodMicronutrientTotals(dateString);
     var rows = Object.keys(totals).map(function (key) {
       var consumed = totals[key];
       var info = getUserRDA(key);
@@ -1234,7 +1259,9 @@
         upperLimit: info.upperLimit,
         percentOfRDA: percentOfRDA,
         status: status,
-        aiOnly: info.aiOnly
+        aiOnly: info.aiOnly,
+        fromFood: foodTotals[key] || 0,
+        fromSupplements: supplementTotals[key] || 0
       };
     });
 
@@ -1271,12 +1298,15 @@
       return { displayName: r.displayName, percentOfRDA: r.percentOfRDA, status: r.status };
     });
 
+    var suppContributedToday = rows.some(function (r) { return r.fromSupplements > 0; });
+
     return {
       criticalCount: criticalCount,
       lowCount: lowCount,
       metCount: metCount,
       overULCount: overULCount,
-      topDeficiencies: topDeficiencies
+      topDeficiencies: topDeficiencies,
+      suppContributedToday: suppContributedToday
     };
   }
 
@@ -1544,6 +1574,12 @@
     if (s.criticalCount > 0) badges += '<span class="micro-badge critical">' + s.criticalCount + ' critical</span>';
     if (s.lowCount > 0) badges += '<span class="micro-badge low">' + s.lowCount + ' low</span>';
     if (s.metCount > 0) badges += '<span class="micro-badge met">' + s.metCount + ' met</span>';
+    // Combined-source indicator -- flags that today's totals include both
+    // food and supplement contributions. Uses the new neutral .info variant
+    // (muted grey, matches --border/--text-secondary) so it reads as
+    // informational rather than a status warning like the
+    // critical/low/over-ul variants above.
+    if (s.suppContributedToday) badges += '<span class="micro-badge info">💊+🥗</span>';
     container.innerHTML =
       '<div class="toggle-row" id="microSummaryBtn">' +
         '<span class="micro-summary-badges">' + badges + '</span>' +
@@ -1582,6 +1618,15 @@
       barHtml = '<div class="stat-bar-track"><div class="stat-bar-fill" style="width:' + pct + '%; background:' + barColor + ';"></div></div>';
       pctHtml = '<div class="micro-percent">' + row.percentOfRDA + '%</div>';
     }
+    // Source breakdown line -- only shown when today's total for this
+    // nutrient came from BOTH food and supplements (a single source is
+    // already self-evident from amountText above, so nothing extra is
+    // rendered in that case).
+    var sourceHtml = "";
+    if (row.fromFood > 0 && row.fromSupplements > 0) {
+      sourceHtml = '<div class="micro-source-breakdown">🥗 ' + fmt(row.fromFood) + row.unit +
+        '  💊 ' + fmt(row.fromSupplements) + row.unit + '</div>';
+    }
     var rowClass = "micro-row" + (row.status === "over_ul" ? " micro-row-over-ul" : "");
     return (
       '<div class="' + rowClass + '">' +
@@ -1591,6 +1636,7 @@
         '</div>' +
         barHtml +
         pctHtml +
+        sourceHtml +
       '</div>'
     );
   }
