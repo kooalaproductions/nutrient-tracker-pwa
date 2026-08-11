@@ -32,18 +32,25 @@ These agents live in `.claude/agents/` and are auto-available every session.
 | `log-engine` | localStorage / logging JS | Logging, totals, history, data persistence |
 | `qa-reviewer` | Read-only QA | After any feature — test before shipping |
 | `bug-fixer` | bugs.json | Fix logged bugs by priority |
+| `orchestrator` | Pipeline coordination | "run the pipeline for X" — sequences data-builder/ui-builder/log-engine/pwa-specialist, self-validates, then qa-reviewer → bug-fixer → commit → push. See `PIPELINE.md` |
 
 ## Current Build Status
 
 ### ✅ Complete
 - [x] Project structure and working directory established
 - [x] CLAUDE.md — project memory (this file)
-- [x] .claude/agents/ — 6 specialist agents
-- [x] bugs.json — persistent bug backlog (active, 3 bugs logged)
-- [x] foods.json — 68 preloaded items
+- [x] .claude/agents/ — 7 specialist agents
+- [x] bugs.json — persistent bug backlog (5 bugs logged, all fixed)
+- [x] foods.json — 74 preloaded items
       (Kirkland proteins, dairy, nuts, snacks, frozen, beverages,
       user daily foods: coffee, honey, 1% milk, apple, string
-      cheese, golden kiwi, Barebells bars + Costco staples)
+      cheese, golden kiwi, Barebells bars + Costco staples; the
+      original 20 "generic" entries — banana, chicken breast, egg,
+      spinach, etc. — now carry real per-serving micronutrient data
+      instead of macros-only; added pistachios, canned wild sockeye
+      salmon, cooked lentils, low-fat cottage cheese, organic quinoa,
+      and raw red bell pepper to close remaining nutrient-coverage
+      gaps — see "2026-08-10 data pass" below)
 - [x] vitamins.json — 20 Kirkland supplement entries
 - [x] rdas.json — Harvard RDA/AI table, 30 nutrients,
       personalized by age + sex
@@ -91,14 +98,25 @@ These agents live in `.claude/agents/` and are auto-available every session.
       (magnesium/niacin/folate/vitamin-E upper limits are correctly
       checked against supplement-only totals, not skipped — fixNotes
       updated to remove stale "TODO: supplement wiring phase" language)
+- [x] 2026-08-10 data pass — foods.json micronutrient backfill
+      (user reported logging a banana showed no potassium anywhere;
+      root cause was the original 20 generic entries had zero
+      micronutrient fields at all. data-builder backfilled real
+      per-serving values across all 20, at each entry's existing
+      serving size. First pass had a systemic bug — several
+      non-gram-serving entries, e.g. spinach's "2 cups", had
+      per-100g reference values copied in unscaled, overstating
+      some fields up to ~2.5x; spinach's vitamin K/vitamin A were
+      caught as the exact unscaled 100g figures. Sent back for a
+      second pass; all values re-verified as
+      100g-reference × serving-weight-ratio before shipping.
+      Also added 6 new items — see foods.json entry above.
+      Live-tested: banana → 422mg potassium, red bell pepper →
+      152mg vitamin C, combined totals verified arithmetically.)
 
 ### 🔲 Pending (priority order)
 - [ ] iPhone home screen install + real device test
       (Option C — foundation is solid, needs on-device verify)
-- [ ] 17 micronutrient fields need food data backfill
-      (thiamin, riboflavin, niacin, B6, B12, choline, selenium,
-      zinc, etc. — top priority foods: eggs, salmon, spinach,
-      chicken breast, beef)
 - [ ] Weekly macro chart UI
       (getWeeklyMacroSummary() is ready, needs ui-builder pass)
 - [ ] Calcium upper limit age-split correction in rdas.json
@@ -112,6 +130,11 @@ These agents live in `.claude/agents/` and are auto-available every session.
 - bug_002 ✅ FIXED — 20 foods.json items missing category field
 - bug_003 ✅ FIXED — addLogEntry() only copied 7 macro fields,
   silently zeroed all 30 micronutrient fields on every log entry
+- bug_004 ✅ FIXED — magnesium UL wrongly applied to food-sourced
+  totals; now correctly scoped to supplement-only totals
+- bug_005 ✅ FIXED — supplement log entries never contributed to
+  micronutrient totals (status field was stale "open" until this
+  session corrected it to match the already-shipped fix)
 
 ### Known Gaps (not bugs, design decisions to revisit)
 - QA qa-reviewer audit of micronutrient feature not yet run
