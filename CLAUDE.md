@@ -56,7 +56,7 @@ These agents live in `.claude/agents/` and are auto-available every session.
 - [x] CLAUDE.md — project memory (this file)
 - [x] .claude/agents/ — 7 specialist agents
 - [x] bugs.json — persistent bug backlog (9 bugs logged, all fixed)
-- [x] foods.json — 74 preloaded items
+- [x] foods.json — 79 preloaded items
       (Kirkland proteins, dairy, nuts, snacks, frozen, beverages,
       user daily foods: coffee, honey, 1% milk, apple, string
       cheese, golden kiwi, Barebells bars + Costco staples; the
@@ -67,7 +67,13 @@ These agents live in `.claude/agents/` and are auto-available every session.
       and raw red bell pepper to close remaining nutrient-coverage
       gaps — see "2026-08-10 data pass" below; every entry also has
       gramsPerServing now, the anchor for unit-conversion logging —
-      see "unit conversion" entry below)
+      see "unit conversion" entry below. 2026-08-11: added Perdue
+      chicken nuggets, Kirkland ketchup, Kirkland salted mixed nuts,
+      white rice, and Kirkland sour cream — caught a real error in
+      white rice's first draft (macro/micronutrient values 2-10x too
+      low for "enriched" rice despite the notes claiming otherwise)
+      by cross-checking live against USDA FoodData Central before
+      shipping, not by trusting the draft's stated confidence)
 - [x] vitamins.json — 20 Kirkland supplement entries
 - [x] rdas.json — Harvard RDA/AI table, 30 nutrients,
       personalized by age + sex
