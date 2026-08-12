@@ -119,5 +119,19 @@
     "fixedBy": "claude",
     "fixedDate": "2026-08-12",
     "fixNotes": "Added min-height:44px scoped to #scanBarcodeBtn and #barcodeModalCancel specifically, rather than widening the shared button.secondary class everywhere it's already used across the app."
+  },
+  {
+    "id": "bug_010",
+    "date": "2026-08-12",
+    "severity": "warning",
+    "status": "fixed",
+    "area": "ui",
+    "title": "Log-modal default unit/amount looked like it meant hundreds of servings",
+    "description": "The log-a-food modal's default (\"native\") unit option was labeled with the food's raw servingSize + servingUnit (e.g. \"240 ml (1 cup)\" for Kirkland 1% milk), and the Amount field defaulted to that same raw number (240). Visually this read as \"Amount: 240, Unit: 240 ml (1 cup)\" -- indistinguishable at a glance from logging 240 cups, even though the underlying math (multiplier = amount / food.servingSize) was correct and always produced exactly 1 serving by default. User reported this directly with a screenshot of the milk case and correctly identified it as confusing/risky: someone \"fixing\" it by typing 1 while leaving the unit unchanged would have actually logged only 1ml, a real silent under-log.",
+    "affectedLines": "index.html: getAvailableLogUnits(), convertLogQuantityToMultiplier() native case, openLogModal(), modalUnitSelect change handler",
+    "foundBy": "user",
+    "fixedBy": "claude",
+    "fixedDate": "2026-08-12",
+    "fixNotes": "Redesigned so the native/default unit option always means \"number of servings\" instead of \"raw quantity in the food's own unit\": label changed to a plain \"servings\" for every food (was food.servingSize + food.servingUnit), convertLogQuantityToMultiplier()'s native case changed from amount/food.servingSize to amount directly (no division), and the Amount field now defaults to 1 (was food.servingSize) both on modal open and when switching back to the native unit. The default \"open modal, tap Log it\" interaction is mathematically identical before and after (multiplier 1) -- verified across all 79 foods.json entries via 10 executable tests, not just reasoned about. Non-native unit paths (g/oz/lb/cup/tbsp/tsp/ml/fl-oz) were untouched. qa-reviewer independent audit: no findings. Live-tested on the exact milk case from the user's screenshot plus a 2-cup food (spinach) -- both now show Amount:1/Unit:servings and log the correct kcal."
   }
 ]

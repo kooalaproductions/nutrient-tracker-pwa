@@ -55,7 +55,7 @@ These agents live in `.claude/agents/` and are auto-available every session.
 - [x] Project structure and working directory established
 - [x] CLAUDE.md — project memory (this file)
 - [x] .claude/agents/ — 7 specialist agents
-- [x] bugs.json — persistent bug backlog (9 bugs logged, all fixed)
+- [x] bugs.json — persistent bug backlog (10 bugs logged, all fixed)
 - [x] foods.json — 79 preloaded items
       (Kirkland proteins, dairy, nuts, snacks, frozen, beverages,
       user daily foods: coffee, honey, 1% milk, apple, string
@@ -180,19 +180,30 @@ These agents live in `.claude/agents/` and are auto-available every session.
       via a mocked decode (real camera hardware not available in the
       testing environment) — OFF lookup, form pre-fill, save, and
       logging-in-alternate-units all verified correct against live
-      Open Food Facts data. Real on-device camera behavior still
-      needs a physical-phone test — see Pending.)
+      Open Food Facts data. 2026-08-12: user confirmed real-device
+      scanning works on their phone — the camera opens, detects a real
+      barcode, and finds/pre-fills a product correctly. bug_008's fix
+      (camera-stream-leak-on-rapid-cancel) not separately re-verified
+      via an explicit rapid-tap test on-device, but the user's security
+      question about the camera indicator turning off was answered by
+      walking through the actual stop()-on-decode/cancel/navigate-away
+      code paths — no report of the camera staying active.)
+- [x] index.html — log-modal default unit means "servings" (bug_010)
+      (user-reported with a screenshot: the default unit option was
+      labeled with the food's raw servingSize + servingUnit, e.g.
+      "240 ml (1 cup)" for milk, right next to an Amount field
+      defaulting to that same "240" — looked like "log 240 cups" even
+      though the math was already correct. Redesigned so the default
+      unit always means "number of servings": label is now always the
+      plain word "servings", Amount defaults to 1, and
+      convertLogQuantityToMultiplier()'s native case is now `amount`
+      directly instead of `amount / food.servingSize`. The default
+      "open modal, tap Log it" result is unchanged (still multiplier 1)
+      — verified across all 79 foods via 10 executable tests. Live-
+      tested on the exact milk case from the screenshot plus a 2-cup
+      food (spinach); both now read Amount:1/Unit:servings correctly.)
 
 ### 🔲 Pending (priority order)
-- [ ] Real on-device camera test for barcode scanning
-      (the scan-to-form-prefill logic is fully verified against live
-      Open Food Facts data via a mocked decode; the literal
-      camera-viewfinder-to-barcode-detection step, which is entirely
-      html5-qrcode's own responsibility, has not been exercised with
-      real camera hardware — test on an actual phone, including a
-      rapid-cancel tap to confirm bug_008's fix holds under a real
-      camera permission prompt, not just the simulated timing this
-      session tested)
 - [ ] iPhone home screen install + real device test
       (Option C — foundation is solid, needs on-device verify)
 - [ ] Weekly macro chart UI
@@ -225,6 +236,10 @@ These agents live in `.claude/agents/` and are auto-available every session.
   that only flips true after start() succeeds, skipping stop())
 - bug_009 ✅ FIXED — barcode-scan buttons were ~38px, below the app's
   44px touch-target convention
+- bug_010 ✅ FIXED — log-modal default unit/amount looked like it meant
+  hundreds of servings (e.g. "Amount: 240, Unit: 240 ml (1 cup)" for
+  milk) — user-reported with a screenshot; "native" unit now always
+  means "servings" (amount defaults to 1) instead of a raw quantity
 
 ### Known Gaps (not bugs, design decisions to revisit)
 - QA qa-reviewer audit of micronutrient feature not yet run
