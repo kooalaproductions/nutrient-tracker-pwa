@@ -219,14 +219,6 @@
     background: none; border: none; color: var(--text-secondary);
     font-size: 13px; padding: 14px; font: inherit; margin-top: 2px;
   }
-  .qty-row { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 18px; }
-  .qty-btn {
-    width: 44px; height: 44px; border-radius: 50%;
-    border: 1px solid var(--border); background: #fff;
-    font-size: 20px; color: var(--accent); font-weight: 700;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .qty-value { font-size: 20px; font-weight: 700; min-width: 90px; text-align: center; }
   .modal-actions { display: flex; gap: 10px; }
   .modal-actions button.secondary { width: auto; flex: 1; }
   .modal-actions button.primary { flex: 2; }
@@ -446,9 +438,28 @@
           <input type="number" id="f_servingSize" value="1" min="0" step="any" />
         </div>
         <div>
-          <label for="f_servingUnit">Unit</label>
-          <input type="text" id="f_servingUnit" placeholder="cup, g, piece…" />
+          <label for="f_servingUnitType">Unit</label>
+          <select id="f_servingUnitType">
+            <option value="g">grams</option>
+            <option value="oz">ounces</option>
+            <option value="lb">pounds</option>
+            <option value="kg">kilograms</option>
+            <option value="cup">cups</option>
+            <option value="tbsp">tablespoons</option>
+            <option value="tsp">teaspoons</option>
+            <option value="ml">milliliters</option>
+            <option value="fl oz">fluid ounces</option>
+            <option value="each">each / custom unit</option>
+          </select>
         </div>
+      </div>
+      <div id="f_servingUnitCustomWrap" style="display:none;">
+        <label for="f_servingUnitCustom">Custom unit name</label>
+        <input type="text" id="f_servingUnitCustom" placeholder="e.g. piece, slice, cookie" />
+      </div>
+      <div id="f_gramsPerServingWrap" style="display:none;">
+        <label for="f_gramsPerServing">Weight of one serving in grams (optional — lets you log this food in grams/oz/lb later)</label>
+        <input type="number" id="f_gramsPerServing" min="0" step="any" placeholder="e.g. 240" />
       </div>
       <div class="form-grid">
         <div><label for="f_calories">Calories</label><input type="number" id="f_calories" min="0" step="any" /></div>
@@ -534,10 +545,15 @@
   <div class="modal">
     <h3 id="modalFoodName"></h3>
     <p class="modal-sub" id="modalFoodMeta"></p>
-    <div class="qty-row">
-      <button class="qty-btn" id="qtyMinus">−</button>
-      <div class="qty-value" id="qtyValue">1</div>
-      <button class="qty-btn" id="qtyPlus">+</button>
+    <div class="form-grid" style="margin-bottom:18px;">
+      <div>
+        <label for="modalAmountInput">Amount</label>
+        <input type="number" id="modalAmountInput" min="0" step="any" inputmode="decimal" />
+      </div>
+      <div>
+        <label for="modalUnitSelect">Unit</label>
+        <select id="modalUnitSelect"></select>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="secondary" id="modalCancel">Cancel</button>
@@ -653,6 +669,155 @@
     "magnesium_mg", "manganese_mg", "molybdenum_mcg", "phosphorus_mg", "potassium_mg",
     "selenium_mcg", "sodium_mg", "zinc_mg", "omega3_mg", "cholesterol_mg"
   ];
+
+  // ---------- unit conversion (log a food in an alternate unit) ----------
+  // Pure helpers: given a food and a user-entered amount+unit, compute the
+  // multiplier addLogEntry(food, multiplier) already expects (it does
+  // entry[k] = Number(food[k]) * multiplier for every macro/micronutrient
+  // field). addLogEntry() itself is untouched -- wiring these into the log
+  // modal's UI/DOM is a separate follow-up task.
+  //
+  // cup:240 (not the stricter legal 236.588) matches this app's own existing
+  // data convention -- several foods.json entries already state "240 ml
+  // (1 cup)" -- so this stays internally consistent with existing serving
+  // labels in the data.
+  var WEIGHT_TO_GRAMS = { g: 1, oz: 28.3495, lb: 453.592, kg: 1000 };
+  var VOLUME_TO_ML = { ml: 1, tsp: 4.9289, tbsp: 14.7868, "fl oz": 29.5735, cup: 240 };
+
+  // Human-readable labels for the alternate-unit options a future UI task
+  // will render (e.g. in a dropdown). Purely descriptive -- not used by any
+  // calculation below.
+  var LOG_UNIT_LABELS = {
+    g: "grams", oz: "ounces", lb: "pounds", kg: "kilograms",
+    ml: "milliliters", tsp: "teaspoons", tbsp: "tablespoons",
+    cup: "cups", "fl oz": "fluid ounces"
+  };
+
+  // Extracts which of VOLUME_TO_ML's units (if any) is this food's own
+  // PRIMARY/native serving unit -- i.e. the unit food.servingSize is actually
+  // counting in. Deliberately only scans the portion of servingUnit BEFORE
+  // the first "(" (the "lead" token), not the whole string: several
+  // foods.json entries use a parenthetical CLARIFICATION that mentions a
+  // different unit than the one servingSize actually measures -- e.g.
+  // "can (11 fl oz / 325ml)" (servingSize:1 means 1 can, not 1 fl oz) or
+  // "bottle (16 fl oz)" (servingSize:1 means 1 bottle). Scanning the full
+  // string would misread "fl oz" out of those as if it were the native
+  // measuring unit and compute a nonsense density. Scanning only the lead
+  // token correctly finds "ml" in "ml (1 cup)" (bone broth -- servingSize
+  // really is in ml) and "cup" in "cup (8.25 fl oz / 244ml)" (chocolate milk
+  // -- servingSize really is in cups), while correctly finding nothing in
+  // "can (...)" / "bottle (...)" (both count units, no volume alternates
+  // should ever be offered for them).
+  function getNativeVolumeUnitKey(servingUnit) {
+    var lead = String(servingUnit || "").split("(")[0].toLowerCase();
+    if (/\bfl\s*oz\b/.test(lead)) return "fl oz";
+    if (/\bcups?\b/.test(lead)) return "cup";
+    if (/\btbsp\b/.test(lead)) return "tbsp";
+    if (/\btsp\b/.test(lead)) return "tsp";
+    if (/\bml\b/.test(lead)) return "ml";
+    return null;
+  }
+
+  // Classifies a food's NATIVE unit category from its servingUnit string:
+  // "weight" (servingUnit starts with "g", e.g. "g", "g (1 oz)"), "volume"
+  // (servingUnit's lead token is a recognized volume word/phrase -- see
+  // getNativeVolumeUnitKey()), or "count" (anything else, e.g. "banana",
+  // "avocado", "egg", "medium", "slice"). "weight" is checked first and wins
+  // over "volume" even if a volume word also appears in a parenthetical
+  // clarification (e.g. "g (2 tbsp)" is weight-native, not volume-native --
+  // gramsPerServing already equals servingSize for these).
+  function getNativeUnitCategory(food) {
+    var unit = String((food && food.servingUnit) || "").trim();
+    if (/^g\b/i.test(unit)) return "weight";
+    if (getNativeVolumeUnitKey(unit)) return "volume";
+    return "count";
+  }
+
+  // Returns the unit options a future logging-modal UI can safely offer for
+  // this specific food. Always includes "native" first (the food's own
+  // servingSize/servingUnit, e.g. "1 banana" or "0.5 avocado" or "1 cup").
+  // If food.gramsPerServing is real, positive data: adds weight alternates
+  // g/oz/lb (kg omitted -- too coarse-grained for typical food portions),
+  // and, when the food is itself volume-native, adds the OTHER volume units
+  // too (excluding whichever one is already the native unit -- no point
+  // offering "cup" as an alternate to a food already natively in cups). If
+  // food.gramsPerServing is missing/null/0, returns ONLY the native option --
+  // no fabricated alternatives ever.
+  function getAvailableLogUnits(food) {
+    var options = [{
+      unit: "native",
+      label: String(food.servingSize) + " " + food.servingUnit
+    }];
+
+    var hasGrams = typeof food.gramsPerServing === "number" &&
+      isFinite(food.gramsPerServing) && food.gramsPerServing > 0;
+    if (!hasGrams) return options;
+
+    ["g", "oz", "lb"].forEach(function (u) {
+      options.push({ unit: u, label: LOG_UNIT_LABELS[u] });
+    });
+
+    if (getNativeUnitCategory(food) === "volume") {
+      var nativeKey = getNativeVolumeUnitKey(food.servingUnit);
+      Object.keys(VOLUME_TO_ML).forEach(function (u) {
+        if (u === nativeKey) return;
+        options.push({ unit: u, label: LOG_UNIT_LABELS[u] });
+      });
+    }
+
+    return options;
+  }
+
+  // Converts a user-entered amount+unit (amount: a positive number the user
+  // typed; unit: one of the strings returned by getAvailableLogUnits(food),
+  // or "native") into the multiplier addLogEntry(food, multiplier) expects --
+  // how many of food's full {servingSize, servingUnit} this amount
+  // represents. Returns null (never a wrong number) for any combination that
+  // shouldn't be reachable given what getAvailableLogUnits() offered for this
+  // food, so a caller can detect that and fall back to native-unit behavior
+  // instead of silently logging garbage.
+  function convertLogQuantityToMultiplier(food, amount, unit) {
+    amount = Number(amount);
+    if (!(amount > 0)) return null;
+
+    // "native": e.g. banana servingSize=1, amount=2 native units -> 2; a food
+    // with servingSize=2 (e.g. spinach "2 cups"), amount=1 native "cups" ->
+    // 0.5, since the user only logged half the stated 2-cup serving.
+    if (unit === "native") {
+      return amount / food.servingSize;
+    }
+
+    var hasGrams = typeof food.gramsPerServing === "number" &&
+      isFinite(food.gramsPerServing) && food.gramsPerServing > 0;
+
+    // Weight unit (g/oz/lb/kg): convert straight to grams, then to a
+    // fraction of the food's own gramsPerServing.
+    if (WEIGHT_TO_GRAMS.hasOwnProperty(unit) && hasGrams) {
+      var enteredGrams = amount * WEIGHT_TO_GRAMS[unit];
+      return enteredGrams / food.gramsPerServing;
+    }
+
+    // Volume unit (cup/tbsp/tsp/ml/"fl oz") on a food that's itself
+    // volume-native: derive THIS food's own density from its existing data
+    // (never assume a universal cup-to-gram ratio -- a cup of oatmeal and a
+    // cup of milk weigh completely different amounts), then convert through
+    // grams the same way the weight branch does.
+    if (VOLUME_TO_ML.hasOwnProperty(unit) && hasGrams && getNativeUnitCategory(food) === "volume") {
+      var nativeVolumeUnitKey = getNativeVolumeUnitKey(food.servingUnit);
+      if (!nativeVolumeUnitKey) return null;
+      var nativeVolumeMl = food.servingSize * VOLUME_TO_ML[nativeVolumeUnitKey];
+      if (!(nativeVolumeMl > 0)) return null;
+      var densityGPerMl = food.gramsPerServing / nativeVolumeMl;
+      var enteredMl = amount * VOLUME_TO_ML[unit];
+      var enteredGrams2 = enteredMl * densityGPerMl;
+      return enteredGrams2 / food.gramsPerServing;
+    }
+
+    // Any other combination (e.g. a volume unit requested on a count-based
+    // food with no volume native unit) shouldn't be reachable if the UI only
+    // offers what getAvailableLogUnits() returned.
+    return null;
+  }
 
   var state = {
     preloadedFoods: [],
@@ -1957,36 +2122,86 @@
 
   // ---------- modal ----------
   var modalBackdrop = document.getElementById("modalBackdrop");
-  var qtyValueEl = document.getElementById("qtyValue");
-  var qty = 1;
+  var modalAmountInput = document.getElementById("modalAmountInput");
+  var modalUnitSelect = document.getElementById("modalUnitSelect");
 
+  // Given a food and an alternate unit (one of the non-"native" unit strings
+  // getAvailableLogUnits() offered for this food), returns how much of that
+  // unit equals exactly ONE full native serving -- used purely to pre-fill a
+  // sensible, never-empty default amount when the unit dropdown changes away
+  // from "native". Read-only against WEIGHT_TO_GRAMS/VOLUME_TO_ML/
+  // getNativeUnitCategory()/getNativeVolumeUnitKey() (none of those are
+  // modified here). Returns null if it can't be computed (shouldn't happen
+  // for units the dropdown actually offered).
+  function oneNativeServingInUnit(food, unit) {
+    if (!food) return null;
+    if (WEIGHT_TO_GRAMS.hasOwnProperty(unit)) {
+      if (!(food.gramsPerServing > 0)) return null;
+      return food.gramsPerServing / WEIGHT_TO_GRAMS[unit];
+    }
+    if (VOLUME_TO_ML.hasOwnProperty(unit) && getNativeUnitCategory(food) === "volume") {
+      var nativeKey = getNativeVolumeUnitKey(food.servingUnit);
+      if (!nativeKey) return null;
+      var nativeVolumeMl = food.servingSize * VOLUME_TO_ML[nativeKey];
+      if (!(nativeVolumeMl > 0)) return null;
+      return nativeVolumeMl / VOLUME_TO_ML[unit];
+    }
+    return null;
+  }
+
+  // Opens the log modal for `food`. Rebuilds the unit dropdown fresh every
+  // time (different foods offer different safe alternate units -- see
+  // getAvailableLogUnits()), defaults it to "native", and pre-fills the
+  // amount field with food.servingSize so the modal opens reading as "this
+  // is exactly 1 serving" before the user changes anything.
   function openLogModal(food) {
     state.pendingFood = food;
-    qty = 1;
-    qtyValueEl.textContent = qty;
     document.getElementById("modalFoodName").textContent = food.name;
     document.getElementById("modalFoodMeta").textContent =
       fmt(food.servingSize) + " " + food.servingUnit + " · " + fmt(food.calories) + " kcal per serving";
+
+    var units = getAvailableLogUnits(food);
+    modalUnitSelect.innerHTML = units.map(function (o) {
+      return '<option value="' + escapeHtml(o.unit) + '">' + escapeHtml(o.label) + '</option>';
+    }).join("");
+    modalUnitSelect.value = "native";
+    modalAmountInput.value = food.servingSize;
+
     modalBackdrop.classList.add("open");
   }
   function closeModal() {
     modalBackdrop.classList.remove("open");
     state.pendingFood = null;
   }
-  document.getElementById("qtyMinus").addEventListener("click", function () {
-    qty = Math.max(0.5, qty - 0.5);
-    qtyValueEl.textContent = qty;
-  });
-  document.getElementById("qtyPlus").addEventListener("click", function () {
-    qty = qty + 0.5;
-    qtyValueEl.textContent = qty;
+  // Re-suggests a sensible amount whenever the unit changes, so the field is
+  // never left empty/invalid: back to the native serving size for "native",
+  // or the amount of the newly selected unit that equals 1 full native
+  // serving otherwise (e.g. switching to "g" pre-fills food.gramsPerServing).
+  modalUnitSelect.addEventListener("change", function () {
+    var food = state.pendingFood;
+    if (!food) return;
+    var unit = modalUnitSelect.value;
+    if (unit === "native") {
+      modalAmountInput.value = food.servingSize;
+      return;
+    }
+    var equivalent = oneNativeServingInUnit(food, unit);
+    modalAmountInput.value = equivalent != null ? Math.round(equivalent * 100) / 100 : 1;
   });
   document.getElementById("modalCancel").addEventListener("click", closeModal);
   modalBackdrop.addEventListener("click", function (e) {
     if (e.target === modalBackdrop) closeModal();
   });
   document.getElementById("modalConfirm").addEventListener("click", function () {
-    if (state.pendingFood) addLogEntry(state.pendingFood, qty);
+    if (!state.pendingFood) { closeModal(); return; }
+    var amount = Number(modalAmountInput.value);
+    var unit = modalUnitSelect.value;
+    var multiplier = convertLogQuantityToMultiplier(state.pendingFood, amount, unit);
+    if (multiplier == null || !(multiplier > 0)) {
+      showToast("Enter a valid amount");
+      return;
+    }
+    addLogEntry(state.pendingFood, multiplier);
     closeModal();
   });
 
@@ -2393,14 +2608,71 @@
     addFoodForm.classList.toggle("open");
   });
 
+  // Shows/hides the two conditional fields in the "Add a custom food" form
+  // based on which unit type is selected in f_servingUnitType, so the form
+  // only asks for what's actually needed/usable for that unit category:
+  //   - WEIGHT units (g/oz/lb/kg, i.e. WEIGHT_TO_GRAMS keys): gramsPerServing
+  //     is always auto-computed from servingSize (see saveFoodBtn handler
+  //     below) -- no user input possible/needed, so the field stays hidden.
+  //     The custom-unit-name field is irrelevant here too.
+  //   - "each": the custom-unit-name field is shown (this is exactly today's
+  //     old free-text field, preserved for foods like "1 slice"/"1 cookie"),
+  //     and gramsPerServing is shown as an optional extra (a density can't be
+  //     assumed for an arbitrary count unit, so it's user-supplied or blank).
+  //   - VOLUME units (cup/tbsp/tsp/ml/"fl oz"): custom-unit-name stays hidden
+  //     (the unit is already known), gramsPerServing is shown as optional
+  //     (same reasoning as "each" -- density can only come from the user).
+  function updateCustomFoodUnitFields() {
+    var unit = document.getElementById("f_servingUnitType").value;
+    var isWeight = WEIGHT_TO_GRAMS.hasOwnProperty(unit);
+    var isEach = unit === "each";
+    document.getElementById("f_servingUnitCustomWrap").style.display = isEach ? "block" : "none";
+    document.getElementById("f_gramsPerServingWrap").style.display = isWeight ? "none" : "block";
+  }
+  document.getElementById("f_servingUnitType").addEventListener("change", updateCustomFoodUnitFields);
+  updateCustomFoodUnitFields(); // sync initial hidden/shown state with the select's default ("g")
+
   document.getElementById("saveFoodBtn").addEventListener("click", function () {
     var name = document.getElementById("f_name").value.trim();
     if (!name) { showToast("Name is required"); return; }
+
+    var servingSize = Number(document.getElementById("f_servingSize").value) || 1;
+    var selectedUnit = document.getElementById("f_servingUnitType").value;
+    var gramsInputEl = document.getElementById("f_gramsPerServing");
+    var gramsInputVal = Number(gramsInputEl.value);
+    var hasGramsInput = gramsInputEl.value !== "" && gramsInputVal > 0;
+
+    var servingUnit, gramsPerServing;
+    if (WEIGHT_TO_GRAMS.hasOwnProperty(selectedUnit)) {
+      // Weight unit: store the raw key itself (e.g. "g") so
+      // getNativeUnitCategory()'s "/^g\b/i" check classifies this food as
+      // weight-native, exactly like foods.json's own weight-based entries.
+      // gramsPerServing is a universal physical conversion -- always safe,
+      // always computable, never fabricated.
+      servingUnit = selectedUnit;
+      gramsPerServing = servingSize * WEIGHT_TO_GRAMS[selectedUnit];
+    } else if (VOLUME_TO_ML.hasOwnProperty(selectedUnit)) {
+      // Volume unit: store the raw key (e.g. "cup") so
+      // getNativeVolumeUnitKey() recognizes it as this food's native volume
+      // unit. gramsPerServing can only come from the user (a density can't be
+      // assumed) -- optional, null if left blank, which is the safe fallback
+      // (that custom food just won't offer weight-based logging later).
+      servingUnit = selectedUnit;
+      gramsPerServing = hasGramsInput ? gramsInputVal : null;
+    } else {
+      // "each" / custom unit: preserves today's free-text flexibility (e.g.
+      // "1 slice", "1 cookie"), falling back to "serving" if left blank --
+      // same fallback the old free-text field already had.
+      servingUnit = document.getElementById("f_servingUnitCustom").value.trim() || "serving";
+      gramsPerServing = hasGramsInput ? gramsInputVal : null;
+    }
+
     var food = {
       id: "custom-" + uid(),
       name: name,
-      servingSize: Number(document.getElementById("f_servingSize").value) || 1,
-      servingUnit: document.getElementById("f_servingUnit").value.trim() || "serving",
+      servingSize: servingSize,
+      servingUnit: servingUnit,
+      gramsPerServing: gramsPerServing,
       calories: Number(document.getElementById("f_calories").value) || 0,
       protein_g: Number(document.getElementById("f_protein").value) || 0,
       carbs_g: Number(document.getElementById("f_carbs").value) || 0,
@@ -2412,10 +2684,12 @@
     };
     state.customFoods.push(food);
     saveCustomFoods();
-    ["f_name", "f_servingUnit", "f_calories", "f_protein", "f_carbs", "f_fat", "f_sugar", "f_fiber", "f_sodium"].forEach(function (id) {
+    ["f_name", "f_servingUnitCustom", "f_gramsPerServing", "f_calories", "f_protein", "f_carbs", "f_fat", "f_sugar", "f_fiber", "f_sodium"].forEach(function (id) {
       document.getElementById(id).value = "";
     });
     document.getElementById("f_servingSize").value = 1;
+    document.getElementById("f_servingUnitType").value = "g";
+    updateCustomFoodUnitFields();
     addFoodToggle.classList.remove("open");
     addFoodForm.classList.remove("open");
     renderFoodList();
