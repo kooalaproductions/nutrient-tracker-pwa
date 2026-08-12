@@ -55,7 +55,7 @@ These agents live in `.claude/agents/` and are auto-available every session.
 - [x] Project structure and working directory established
 - [x] CLAUDE.md — project memory (this file)
 - [x] .claude/agents/ — 7 specialist agents
-- [x] bugs.json — persistent bug backlog (5 bugs logged, all fixed)
+- [x] bugs.json — persistent bug backlog (7 bugs logged, all fixed)
 - [x] foods.json — 74 preloaded items
       (Kirkland proteins, dairy, nuts, snacks, frozen, beverages,
       user daily foods: coffee, honey, 1% milk, apple, string
@@ -65,7 +65,9 @@ These agents live in `.claude/agents/` and are auto-available every session.
       instead of macros-only; added pistachios, canned wild sockeye
       salmon, cooked lentils, low-fat cottage cheese, organic quinoa,
       and raw red bell pepper to close remaining nutrient-coverage
-      gaps — see "2026-08-10 data pass" below)
+      gaps — see "2026-08-10 data pass" below; every entry also has
+      gramsPerServing now, the anchor for unit-conversion logging —
+      see "unit conversion" entry below)
 - [x] vitamins.json — 20 Kirkland supplement entries
 - [x] rdas.json — Harvard RDA/AI table, 30 nutrients,
       personalized by age + sex
@@ -128,6 +130,24 @@ These agents live in `.claude/agents/` and are auto-available every session.
       Also added 6 new items — see foods.json entry above.
       Live-tested: banana → 422mg potassium, red bell pepper →
       152mg vitamin C, combined totals verified arithmetically.)
+- [x] index.html — log foods in alternate units
+      (gramsPerServing on every foods.json entry anchors a
+      density-derived conversion system — never a universal
+      cup-to-gram assumption, since a cup of oatmeal and a cup of
+      milk weigh completely different amounts. getAvailableLogUnits()/
+      convertLogQuantityToMultiplier() compute a food-specific
+      multiplier that feeds the existing, untouched addLogEntry(), so
+      macro/micronutrient math stays correct regardless of unit used.
+      Log modal: amount input + unit dropdown (grams/oz/lb/cups/tbsp/
+      tsp/ml/fl-oz, filtered to only what's safely convertible for
+      that specific food) replaced the old +/-0.5 stepper. "Add a
+      custom food" form: servingUnit is now a structured dropdown
+      instead of free text, with gramsPerServing auto-computed for
+      weight units and optional for volume/count units. Independently
+      validated with 12 executable tests incl. an exhaustive check
+      across all 74 foods; live-tested logging oatmeal in grams —
+      83 kcal + all 9 micronutrients exactly matched hand-calculated
+      halves of the native 1-cup serving.)
 
 ### 🔲 Pending (priority order)
 - [ ] iPhone home screen install + real device test
@@ -136,7 +156,6 @@ These agents live in `.claude/agents/` and are auto-available every session.
       (getWeeklyMacroSummary() is ready, needs ui-builder pass)
 - [ ] Calcium upper limit age-split correction in rdas.json
       (currently flat 2500mg, should be 2000mg for age 51+)
-- [ ] Custom food entry form improvements
 - [ ] Photo-based nutrition scanning
       (Phase 2 — requires API integration, out of scope for local PWA)
 
@@ -150,6 +169,10 @@ These agents live in `.claude/agents/` and are auto-available every session.
 - bug_005 ✅ FIXED — supplement log entries never contributed to
   micronutrient totals (status field was stale "open" until this
   session corrected it to match the already-shipped fix)
+- bug_006 ✅ FIXED — micronutrient contributor toggle's touch target
+  was 40px, below the app's 44px convention
+- bug_007 ✅ FIXED — contributor item names had no flex/min-width,
+  risking horizontal overflow on narrow viewports
 
 ### Known Gaps (not bugs, design decisions to revisit)
 - QA qa-reviewer audit of micronutrient feature not yet run
