@@ -376,6 +376,34 @@
   .micro-contributor-name { flex: 1; min-width: 0; overflow-wrap: break-word; }
   .micro-contributor-amount { flex: 0 0 auto; white-space: nowrap; }
   .micro-contributor-brand { font-size: 10.5px; opacity: 0.8; }
+
+  /* barcode scan (camera modal + scan-result preview in "Add a custom food") */
+  #barcodeScannerContainer {
+    width: 100%;
+    min-height: 260px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #000;
+    margin: 4px 0 2px;
+  }
+  /* html5-qrcode injects its own <video>/<canvas> sized off the container's
+     measured width -- this just guarantees they never overflow the modal on
+     a narrow (375px) viewport if that measurement ever lags a layout change. */
+  #barcodeScannerContainer video, #barcodeScannerContainer canvas { width: 100% !important; }
+  /* button.secondary's shared padding:12px falls a bit short of this app's
+     44px touch-target convention (.remove-btn/.check-row/.cal-nav-btn/etc.)
+     -- scoped to just these two new buttons rather than widening the shared
+     .secondary class everywhere it's already used across the app. */
+  #scanBarcodeBtn, #barcodeModalCancel { min-height: 44px; }
+  .scanned-micro-preview {
+    background: var(--accent-light);
+    color: var(--text-secondary);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+  .scanned-micro-preview strong { color: var(--text); }
 </style>
 </head>
 <body>
@@ -427,10 +455,15 @@
       <h2 style="margin:0;">Add a custom food</h2>
       <span class="chevron">▾</span>
     </div>
+    <button class="secondary" id="scanBarcodeBtn" type="button" style="margin-top:10px;">📷 Scan barcode</button>
     <div class="form-body" id="addFoodForm">
       <div>
         <label for="f_name">Name</label>
         <input type="text" id="f_name" placeholder="e.g. Homemade Chili" />
+      </div>
+      <div>
+        <label for="f_brand">Brand (optional)</label>
+        <input type="text" id="f_brand" placeholder="e.g. Kirkland Signature" autocomplete="off" />
       </div>
       <div class="form-grid">
         <div>
@@ -470,6 +503,7 @@
         <div><label for="f_fiber">Fiber (g)</label><input type="number" id="f_fiber" min="0" step="any" /></div>
         <div><label for="f_sodium">Sodium (mg)</label><input type="number" id="f_sodium" min="0" step="any" /></div>
       </div>
+      <div class="scanned-micro-preview" id="f_scannedMicroPreview" style="display:none;"></div>
       <button class="primary" id="saveFoodBtn">Save food</button>
     </div>
   </section>
@@ -608,6 +642,20 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="barcodeModalBackdrop">
+  <div class="modal">
+    <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+      <h3>Scan barcode</h3>
+      <button class="modal-close-btn" id="barcodeModalCloseBtn" type="button" aria-label="Close">✕</button>
+    </div>
+    <p class="modal-sub" id="barcodeScanStatus">Starting camera…</p>
+    <div id="barcodeScannerContainer"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="secondary" id="barcodeModalCancel" style="flex:1;">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div class="onboarding-backdrop" id="onboardingBackdrop">
   <div class="onboarding-panel">
     <h3>Let's personalize your goals</h3>
@@ -644,6 +692,7 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="./html5-qrcode.min.js"></script>
 <script>
 (function () {
   "use strict";
@@ -817,6 +866,232 @@
     // food with no volume native unit) shouldn't be reachable if the UI only
     // offers what getAvailableLogUnits() returned.
     return null;
+  }
+
+  // ---------- barcode scan: Open Food Facts lookup ----------
+  // Pure, DOM-free helpers that turn a scanned barcode into a food object in
+  // this app's exact schema (same shape the "Add a custom food" form builds
+  // in the saveFoodBtn handler: id/custom are intentionally NOT set here --
+  // that's left to the follow-up UI task, same as how this file elsewhere
+  // keeps "build the data" and "persist/render the data" as separate
+  // responsibilities). See mapOpenFoodFactsProductToFood()'s doc comment for
+  // the mass-unit-conversion approach and which OFF nutrient keys are mapped.
+
+  // Generic mass-unit converter (g/kg/mg/mcg <-> g/kg/mg/mcg). Open Food
+  // Facts nutriments are NOT guaranteed to be in any particular unit -- every
+  // "<key>_100g" numeric field is paired with a "<key>_unit" string stating
+  // what unit that number is actually in (verified via real OFF API
+  // responses: e.g. sodium_100g:0.0113 with sodium_unit:"g" means 11.3mg, NOT
+  // 0.0113mg) -- so every conversion below reads the stated unit and scales
+  // through grams as a common base, rather than assuming "always divide/
+  // multiply by 1000". Returns null (never a silently-wrong number) when
+  // either unit isn't one of the plain mass units this app's fields use --
+  // e.g. "IU" (international units) isn't a fixed multiple of grams (the
+  // IU<->mass conversion factor is different per-vitamin), so a value stated
+  // in IU is intentionally left unconverted/unmapped rather than guessed.
+  var MASS_UNIT_TO_GRAMS = { mcg: 0.000001, "µg": 0.000001, ug: 0.000001, mg: 0.001, g: 1, kg: 1000 };
+  function convertMassUnit(value, fromUnit, toUnit) {
+    if (value == null || value === "" || isNaN(Number(value))) return null;
+    var from = MASS_UNIT_TO_GRAMS[String(fromUnit || "").trim().toLowerCase()];
+    var to = MASS_UNIT_TO_GRAMS[String(toUnit || "").trim().toLowerCase()];
+    if (from == null || to == null) return null;
+    return (Number(value) * from) / to;
+  }
+
+  // Kills floating-point noise (e.g. 535.79999999999995) from the division
+  // above without discarding meaningful precision -- this app's fmt() rounds
+  // to 1 decimal only for DISPLAY; storage keeps more precision than that, so
+  // this rounds to 6 decimal places rather than 1.
+  function roundForStorage(n) {
+    return Math.round(Number(n) * 1e6) / 1e6;
+  }
+
+  // appKey -> Open Food Facts nutriment base key (i.e. the "<key>" in
+  // "<key>_100g" / "<key>_unit"). Every one of this app's 30 MICRONUTRIENT_KEYS
+  // ends in either "_mcg" or "_mg" (never "_g"), so the target unit for the
+  // convertMassUnit() call is always derived from that suffix -- see
+  // getTargetUnitFromKey() below. sodium_mg is intentionally NOT in this map
+  // -- it's one of this app's core NUTRIENT_KEYS (always-present, defaults
+  // to 0, exactly like calories/protein_g/etc.), handled directly in
+  // mapOpenFoodFactsProductToFood() below rather than through the sparse
+  // micronutrient loop.
+  //
+  // Values are arrays of candidate Open Food Facts nutriment base keys,
+  // checked in order (first one present in the response wins). Not just
+  // defensive style -- this is empirically necessary: live verification
+  // against real product data (see mapOpenFoodFactsProductToFood() below)
+  // found folate_mcg's original single-candidate mapping ("vitamin-b9") is
+  // WRONG for real data -- General Mills Trix (barcode 016000275324) has
+  // folates_100g/folates_unit populated with real numbers, but no
+  // vitamin-b9_100g field at all. OFF's own taxonomy
+  // (static.openfoodfacts.org/data/taxonomies/nutrients.json) lists both
+  // "zz:folates" and "zz:vitamin-b9" as separate entries, and real product
+  // data uses "folates". Every other candidate below was cross-checked
+  // against that same taxonomy file and, where testable, live product data
+  // (vitamin-a/c/d/e/k/pp, choline, calcium/iron/zinc/magnesium/phosphorus/
+  // potassium/manganese/selenium/cholesterol/omega-3-fat/sodium all
+  // confirmed via real barcodes 0049000028911/016000275270/016000275324) --
+  // but thiamin/riboflavin/vitamin-b6/biotin/pantothenic-acid/vitamin-b12/
+  // chromium/copper/fluoride/iodine/molybdenum could only be confirmed
+  // against the taxonomy, not live data with those fields actually
+  // populated (no real product tested happened to carry them), so each
+  // keeps a second-choice fallback candidate where a plausible alternate
+  // naming exists, same defensive pattern that caught the folate bug.
+  var OFF_MICRONUTRIENT_KEY_MAP = {
+    vitamina_mcg: ["vitamin-a"],
+    thiamin_mg: ["vitamin-b1", "thiamin"],
+    riboflavin_mg: ["vitamin-b2", "riboflavin"],
+    niacin_mg: ["vitamin-pp", "niacin"],
+    pantothenicacid_mg: ["pantothenic-acid"],
+    vitaminb6_mg: ["vitamin-b6"],
+    biotin_mcg: ["biotin"],
+    folate_mcg: ["folates", "vitamin-b9", "folic-acid"],
+    vitaminb12_mcg: ["vitamin-b12"],
+    vitaminc_mg: ["vitamin-c"],
+    choline_mg: ["choline"],
+    vitamind_mcg: ["vitamin-d"],
+    vitamine_mg: ["vitamin-e"],
+    vitamink_mcg: ["vitamin-k"],
+    calcium_mg: ["calcium"],
+    chromium_mcg: ["chromium"],
+    copper_mcg: ["copper"],
+    fluoride_mg: ["fluoride"],
+    iodine_mcg: ["iodine"],
+    iron_mg: ["iron"],
+    magnesium_mg: ["magnesium"],
+    manganese_mg: ["manganese"],
+    molybdenum_mcg: ["molybdenum"],
+    phosphorus_mg: ["phosphorus"],
+    potassium_mg: ["potassium"],
+    selenium_mcg: ["selenium"],
+    zinc_mg: ["zinc"],
+    omega3_mg: ["omega-3-fat", "omega-3"],
+    cholesterol_mg: ["cholesterol"]
+  };
+
+  function getTargetUnitFromKey(appKey) {
+    if (/_mcg$/.test(appKey)) return "mcg";
+    if (/_mg$/.test(appKey)) return "mg";
+    return null;
+  }
+
+  // TASK 1: pure mapper. offProduct is an already-unwrapped `product` object
+  // (i.e. response.product from a successful {status:1, product:{...}} Open
+  // Food Facts response), barcode is the scanned barcode string (used only
+  // as a fallback name). No DOM, no state, no network -- safe to unit-test in
+  // isolation.
+  //
+  // servingSize/servingUnit/gramsPerServing are always the fixed "100 g"
+  // triple: Open Food Facts nutriments are always expressed per 100g of
+  // product (that's what "<key>_100g" means), and per-package/per-serving
+  // fields (serving_size, nutriments["<key>_serving"]) are far less reliably
+  // populated across products than the guaranteed per-100g figures, so this
+  // deliberately always maps to the "100 g" serving rather than attempting a
+  // less-reliable per-serving read.
+  //
+  // Every macro field defaults to 0 if missing (matches this app's core
+  // NUTRIENT_KEYS convention -- see computeTotals()/addLogEntry(), which
+  // always read these 7 fields with no null-check). Every micronutrient field
+  // is left OUT of the returned object entirely if the source data has no
+  // real number for it (matches this app's sparse-micronutrient convention --
+  // see addLogEntry()'s comment on why it never defaults an absent
+  // micronutrient field to 0: getDailyMicronutrientTotals() treats a missing
+  // key as "not tracked", not as "tracked at zero").
+  function mapOpenFoodFactsProductToFood(offProduct, barcode) {
+    offProduct = offProduct || {};
+    var nutriments = offProduct.nutriments || {};
+
+    var rawName = String(offProduct.product_name || "").trim();
+    var name = rawName || ("Scanned item " + barcode);
+
+    var rawBrands = String(offProduct.brands || "").trim();
+    var brand = rawBrands ? rawBrands.split(",")[0].trim() : "";
+
+    var food = {
+      name: name,
+      brand: brand,
+      servingSize: 100,
+      servingUnit: "g",
+      gramsPerServing: 100,
+      calories: roundForStorage(Number(nutriments["energy-kcal_100g"]) || 0),
+      protein_g: roundForStorage(Number(nutriments["proteins_100g"]) || 0),
+      carbs_g: roundForStorage(Number(nutriments["carbohydrates_100g"]) || 0),
+      fat_g: roundForStorage(Number(nutriments["fat_100g"]) || 0),
+      sugar_g: roundForStorage(Number(nutriments["sugars_100g"]) || 0),
+      fiber_g: roundForStorage(Number(nutriments["fiber_100g"]) || 0),
+      sodium_mg: 0
+    };
+
+    // sodium_mg: core field (always present, defaults to 0) but still needs
+    // the same generic unit conversion as every micronutrient below --
+    // verified real OFF data has sodium_100g in "g" (see MASS_UNIT_TO_GRAMS
+    // comment above), which would be 1000x wrong read as milligrams directly.
+    var sodiumConverted = convertMassUnit(nutriments["sodium_100g"], nutriments["sodium_unit"], "mg");
+    if (sodiumConverted != null) food.sodium_mg = roundForStorage(sodiumConverted);
+
+    Object.keys(OFF_MICRONUTRIENT_KEY_MAP).forEach(function (appKey) {
+      var candidates = OFF_MICRONUTRIENT_KEY_MAP[appKey];
+      // Try each candidate OFF key in order, use the first one this product's
+      // response actually has a real number for (see the map's comment above
+      // for why this isn't just defensive -- folate's first-choice name was
+      // flat-out wrong for real data until this fallback was added).
+      var offKey = candidates.filter(function (c) { return nutriments[c + "_100g"] != null && nutriments[c + "_100g"] !== ""; })[0];
+      if (!offKey) return; // none of the candidates present -- leave sparse, never default to 0
+      var rawValue = nutriments[offKey + "_100g"];
+      var targetUnit = getTargetUnitFromKey(appKey);
+      if (!targetUnit) return;
+      var converted = convertMassUnit(rawValue, nutriments[offKey + "_unit"], targetUnit);
+      if (converted == null || isNaN(converted)) return; // unsupported/unstated unit (e.g. IU) -- skip rather than guess
+      food[appKey] = roundForStorage(converted);
+    });
+
+    return food;
+  }
+
+  // TASK 2: fetches a barcode from Open Food Facts and always resolves (never
+  // rejects) to one of three shapes -- { found:true, food } / { found:false,
+  // reason:"not_found" } / { found:false, reason:"network_error" } -- so a
+  // follow-up UI task can branch on the result with a plain .then(), no
+  // .catch() required. AbortController enforces a 10s timeout so a
+  // slow/hanging network can't leave a caller's UI stuck waiting forever.
+  function fetchProductByBarcode(barcode) {
+    var url = "https://world.openfoodfacts.org/api/v2/product/" + encodeURIComponent(barcode) + ".json";
+
+    var controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var timeoutId = controller ? setTimeout(function () { controller.abort(); }, 10000) : null;
+
+    var fetchOptions = {
+      method: "GET",
+      headers: {
+        // Courtesy header Open Food Facts asks API consumers to send
+        // (identifies the calling app in their traffic logs). Not required
+        // for the request to succeed -- if a browser silently drops/ignores
+        // it (some browsers restrict script-set User-Agent headers), the
+        // request still works identically, it just won't self-identify.
+        "User-Agent": "NutrientTrackerPWA/1.0 (github.com/kooalaproductions/nutrient-tracker-pwa)"
+      }
+    };
+    if (controller) fetchOptions.signal = controller.signal;
+
+    return fetch(url, fetchOptions)
+      .then(function (response) {
+        if (timeoutId) clearTimeout(timeoutId);
+        if (!response.ok) throw new Error("Open Food Facts HTTP " + response.status);
+        return response.json();
+      })
+      .then(function (data) {
+        if (!data || data.status !== 1 || !data.product) {
+          return { found: false, reason: "not_found" };
+        }
+        return { found: true, food: mapOpenFoodFactsProductToFood(data.product, barcode) };
+      })
+      .catch(function () {
+        // Covers: offline, timeout/AbortError, CORS failure, non-2xx (thrown
+        // above), malformed JSON (response.json() rejects) -- every failure
+        // mode funnels through here so this function itself never throws.
+        if (timeoutId) clearTimeout(timeoutId);
+        return { found: false, reason: "network_error" };
+      });
   }
 
   var state = {
@@ -2606,6 +2881,13 @@
   addFoodToggle.addEventListener("click", function () {
     addFoodToggle.classList.toggle("open");
     addFoodForm.classList.toggle("open");
+    // Closing the form manually (not via a successful save) counts as
+    // "cancelled" per the barcode-scan feature's contract -- clear any
+    // pending scanned-micronutrient preview so a later manual entry never
+    // inherits stale data from a previous scan. clearScannedMicroPreview()
+    // is defined further down (barcode scanner section) but safe to call
+    // here since both run only after the whole script has executed once.
+    if (!addFoodForm.classList.contains("open")) clearScannedMicroPreview();
   });
 
   // Shows/hides the two conditional fields in the "Add a custom food" form
@@ -2670,6 +2952,11 @@
     var food = {
       id: "custom-" + uid(),
       name: name,
+      // Custom foods never had a brand field before -- default "" (not
+      // undefined) so this matches how foods.json entries already use an
+      // optional brand string for display/search (see food-meta rendering
+      // in renderFoodList()).
+      brand: document.getElementById("f_brand").value.trim(),
       servingSize: servingSize,
       servingUnit: servingUnit,
       gramsPerServing: gramsPerServing,
@@ -2682,9 +2969,17 @@
       sodium_mg: Number(document.getElementById("f_sodium").value) || 0,
       custom: true
     };
+    // Merge in any sparse micronutrient fields a barcode scan found (see the
+    // barcode scanner section below) -- read-only in the form, but still
+    // saved onto the food record same as every other field here.
+    if (pendingScannedMicronutrients) {
+      Object.keys(pendingScannedMicronutrients).forEach(function (k) {
+        food[k] = pendingScannedMicronutrients[k];
+      });
+    }
     state.customFoods.push(food);
     saveCustomFoods();
-    ["f_name", "f_servingUnitCustom", "f_gramsPerServing", "f_calories", "f_protein", "f_carbs", "f_fat", "f_sugar", "f_fiber", "f_sodium"].forEach(function (id) {
+    ["f_name", "f_brand", "f_servingUnitCustom", "f_gramsPerServing", "f_calories", "f_protein", "f_carbs", "f_fat", "f_sugar", "f_fiber", "f_sodium"].forEach(function (id) {
       document.getElementById(id).value = "";
     });
     document.getElementById("f_servingSize").value = 1;
@@ -2692,8 +2987,237 @@
     updateCustomFoodUnitFields();
     addFoodToggle.classList.remove("open");
     addFoodForm.classList.remove("open");
+    clearScannedMicroPreview(); // successful save -- never let scanned data leak into a later manual entry
     renderFoodList();
     showToast("Saved " + food.name);
+  });
+
+  // ---------- barcode scanner (camera -> Open Food Facts -> pre-filled custom-food form) ----------
+  // Uses the low-level Html5Qrcode class rather than the turnkey
+  // Html5QrcodeScanner widget: this app already has its own modal/backdrop/
+  // status-text conventions (see modalBackdrop, supplementModalBackdrop,
+  // etc. above) and Html5QrcodeScanner renders its own competing start/stop/
+  // torch UI shell into whatever container it's given, which would look and
+  // behave inconsistently with every other modal in this file. Html5Qrcode
+  // just gives a raw start()/stop() the code below drives manually, reusing
+  // this app's existing modal pattern.
+  var barcodeModalBackdrop = document.getElementById("barcodeModalBackdrop");
+  var barcodeScanStatusEl = document.getElementById("barcodeScanStatus");
+  var html5QrcodeInstance = null;   // the running scanner instance, or null when nothing is active
+  var barcodeScannerRunning = false; // Html5Qrcode has no synchronous "is it running" getter, so this is tracked manually to avoid double-start/double-stop races
+
+  // Sparse micronutrient key/value pairs from the most recent successful
+  // barcode scan, held here so saveFoodBtn's handler (above) can merge them
+  // into whatever the user actually saves. Cleared after a successful save
+  // AND whenever the custom-food form/toggle is closed/cancelled (see
+  // addFoodToggle's click handler above and clearScannedMicroPreview()
+  // below), so a later plain manual entry never inherits stale scanned data.
+  var pendingScannedMicronutrients = null;
+
+  function updateBarcodeScanStatus(msg) {
+    if (barcodeScanStatusEl) barcodeScanStatusEl.textContent = msg;
+  }
+
+  // Opens the camera modal and starts the scanner. Always leaves the modal in
+  // a usable state -- if the camera can't start for any reason, a clear
+  // message is shown in-modal (see startBarcodeScanner()) rather than a
+  // blank/frozen preview.
+  function openBarcodeModal() {
+    updateBarcodeScanStatus("Starting camera…");
+    barcodeModalBackdrop.classList.add("open");
+    startBarcodeScanner();
+  }
+
+  function closeBarcodeModal() {
+    barcodeModalBackdrop.classList.remove("open");
+    stopBarcodeScanner();
+  }
+
+  // Starts Html5Qrcode against #barcodeScannerContainer, narrowed to UPC/EAN
+  // formats only (faster/more reliable than scanning for every supported
+  // format including QR, per this feature's scope: packaged grocery
+  // products). Guards against both failure modes Html5Qrcode can hit:
+  // synchronous construction errors (try/catch) and the async start()
+  // promise rejecting (permission denied / no camera device -- .catch()).
+  // Either failure path shows a clear in-modal message and leaves the rest
+  // of the app (the manual "Add a custom food" form) fully usable.
+  function startBarcodeScanner() {
+    if (typeof Html5Qrcode === "undefined") {
+      updateBarcodeScanStatus("Barcode scanner couldn't load — you can still add this food manually below.");
+      return;
+    }
+    try {
+      html5QrcodeInstance = new Html5Qrcode("barcodeScannerContainer", {
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E,
+          Html5QrcodeSupportedFormats.EAN_8
+        ]
+      });
+      html5QrcodeInstance.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 260, height: 130 } },
+        function (decodedText) { handleBarcodeDecoded(decodedText); },
+        function () { /* per-frame "no barcode found in this frame yet" -- expected continuously while scanning, not an error */ }
+      ).then(function () {
+        barcodeScannerRunning = true;
+        updateBarcodeScanStatus("Point your camera at a barcode.");
+      }).catch(function () {
+        barcodeScannerRunning = false;
+        updateBarcodeScanStatus("Camera access denied — you can still add this food manually below.");
+      });
+    } catch (err) {
+      barcodeScannerRunning = false;
+      updateBarcodeScanStatus("Couldn't start the camera — you can still add this food manually below.");
+    }
+  }
+
+  // Always safe to call, whether or not a scan is actually running (cancel
+  // tapped before the camera finished starting, barcode already decoded and
+  // already stopped, permission was denied so nothing ever started, etc.) --
+  // never leaves the camera stream running in the background.
+  //
+  // Guards on html5QrcodeInstance ALONE, not also barcodeScannerRunning:
+  // html5QrcodeInstance is assigned synchronously right after construction,
+  // before start() is even called, but barcodeScannerRunning only flips true
+  // inside start()'s .then() once it resolves. That gap is a real window --
+  // if the user cancels fast enough (tapping Cancel before the camera
+  // permission prompt/init finishes), an instance exists but
+  // barcodeScannerRunning is still false. The old `|| !barcodeScannerRunning`
+  // condition treated that as "nothing to stop" and skipped instance.stop()
+  // entirely, leaking the camera stream in the background. Html5Qrcode's
+  // stop() is safe to call on a not-yet-fully-started instance (the .catch()
+  // below already covers "already stopped / never fully started"), so
+  // there's no case where calling it unconditionally here is wrong.
+  function stopBarcodeScanner() {
+    if (!html5QrcodeInstance) {
+      barcodeScannerRunning = false;
+      return;
+    }
+    var instance = html5QrcodeInstance;
+    html5QrcodeInstance = null;
+    barcodeScannerRunning = false;
+    instance.stop().catch(function () { /* already stopped / never fully started -- nothing more to release */ });
+  }
+
+  // Fires on a successful decode. Stops the camera and closes the modal
+  // IMMEDIATELY (per this feature's requirement -- never leave the camera
+  // running while the network lookup happens), then looks the barcode up.
+  function handleBarcodeDecoded(barcode) {
+    stopBarcodeScanner();
+    barcodeModalBackdrop.classList.remove("open");
+    showToast("Looking up barcode…");
+    fetchProductByBarcode(barcode).then(handleBarcodeLookupResult);
+  }
+
+  // Branches on fetchProductByBarcode()'s three possible resolutions (never
+  // rejects -- see that function's doc comment). Every path ends with the
+  // "Add a custom food" form open and usable, so the user is never stuck.
+  function handleBarcodeLookupResult(result) {
+    if (result.found) {
+      openCustomFoodFormWithScanResult(result.food);
+      showToast("Found: " + result.food.name);
+    } else if (result.reason === "not_found") {
+      showToast("Barcode not found in the nutrition database — you can add it manually below");
+      openCustomFoodForm();
+    } else {
+      showToast("Couldn't reach the nutrition database — check your connection or enter the food manually");
+      openCustomFoodForm();
+    }
+  }
+
+  // Opens the "Add a custom food" toggle/form without prefilling anything --
+  // used by the not_found / network_error paths above.
+  function openCustomFoodForm() {
+    addFoodToggle.classList.add("open");
+    addFoodForm.classList.add("open");
+  }
+
+  // Opens the form AND prefills it from a successful barcode lookup. Never
+  // auto-saves -- the user still has to review and tap "Save food"
+  // themselves (Open Food Facts is crowd-sourced and data quality varies,
+  // same "assist, don't auto-trust" treatment this app's own data work used
+  // elsewhere this session).
+  function openCustomFoodFormWithScanResult(food) {
+    openCustomFoodForm();
+
+    document.getElementById("f_name").value = food.name || "";
+    document.getElementById("f_brand").value = food.brand || "";
+
+    document.getElementById("f_servingSize").value = 100;
+    var unitSelect = document.getElementById("f_servingUnitType");
+    unitSelect.value = "g";
+    // Dispatch the existing change handler so updateCustomFoodUnitFields()
+    // runs and hides/shows the conditional fields correctly, exactly as if
+    // the user had picked "grams" themselves.
+    unitSelect.dispatchEvent(new Event("change"));
+
+    document.getElementById("f_calories").value = food.calories != null ? food.calories : "";
+    document.getElementById("f_protein").value = food.protein_g != null ? food.protein_g : "";
+    document.getElementById("f_carbs").value = food.carbs_g != null ? food.carbs_g : "";
+    document.getElementById("f_fat").value = food.fat_g != null ? food.fat_g : "";
+    document.getElementById("f_sugar").value = food.sugar_g != null ? food.sugar_g : "";
+    document.getElementById("f_fiber").value = food.fiber_g != null ? food.fiber_g : "";
+    document.getElementById("f_sodium").value = food.sodium_mg != null ? food.sodium_mg : "";
+
+    // Collect whichever of the 30 possible micronutrient keys this scan
+    // actually found (sparse -- only real values, never defaulted to 0) for
+    // the read-only preview list below.
+    var found = {};
+    MICRONUTRIENT_KEYS.forEach(function (k) {
+      if (food[k] != null) found[k] = food[k];
+    });
+    pendingScannedMicronutrients = Object.keys(found).length > 0 ? found : null;
+    renderScannedMicroPreview();
+  }
+
+  // Read-only "Also found via scan: ..." preview of
+  // pendingScannedMicronutrients -- a visibility affordance, not an editor
+  // (this feature deliberately does NOT build 30 editable input fields).
+  // Uses this app's existing fmt() helper and the same
+  // state.rdas[key].displayName lookup microRowHtml() uses elsewhere for
+  // human-readable nutrient names instead of raw keys like "vitamina_mcg".
+  function renderScannedMicroPreview() {
+    var container = document.getElementById("f_scannedMicroPreview");
+    if (!container) return;
+    if (!pendingScannedMicronutrients) {
+      container.style.display = "none";
+      container.innerHTML = "";
+      return;
+    }
+    var parts = MICRONUTRIENT_KEYS.filter(function (k) {
+      return pendingScannedMicronutrients[k] != null;
+    }).map(function (k) {
+      var meta = state.rdas[k];
+      var displayName = meta ? meta.displayName : k;
+      var unit = meta ? meta.unit : "";
+      return escapeHtml(displayName) + " " + fmt(pendingScannedMicronutrients[k]) + escapeHtml(unit);
+    });
+    if (parts.length === 0) {
+      container.style.display = "none";
+      container.innerHTML = "";
+      return;
+    }
+    container.style.display = "block";
+    container.innerHTML = '<strong>Also found via scan:</strong> ' + parts.join(", ");
+  }
+
+  // Clears pendingScannedMicronutrients and its preview -- called after a
+  // successful save (see saveFoodBtn's handler above) and whenever the
+  // custom-food form/toggle is closed/cancelled (see addFoodToggle's click
+  // handler above), so a later plain manual entry never inherits stale
+  // scanned data from a previous scan.
+  function clearScannedMicroPreview() {
+    pendingScannedMicronutrients = null;
+    renderScannedMicroPreview();
+  }
+
+  document.getElementById("scanBarcodeBtn").addEventListener("click", openBarcodeModal);
+  document.getElementById("barcodeModalCancel").addEventListener("click", closeBarcodeModal);
+  document.getElementById("barcodeModalCloseBtn").addEventListener("click", closeBarcodeModal);
+  barcodeModalBackdrop.addEventListener("click", function (e) {
+    if (e.target === barcodeModalBackdrop) closeBarcodeModal();
   });
 
   // ---------- toast ----------
@@ -2724,6 +3248,17 @@
   // small "active" class swap on the nav buttons.
   var navButtons = document.querySelectorAll(".nav-btn");
   function switchView(viewId) {
+    // If the barcode scanner's camera modal is open and the user navigates
+    // to a different bottom-nav view entirely, release the camera the same
+    // way closeBarcodeModal() would -- same rigor as this app's other
+    // modals, which never leave background state running once their view is
+    // no longer visible. barcodeModalBackdrop is declared later in this file
+    // (barcode scanner section) but already assigned by the time any click
+    // can reach here, since all top-level script statements run before any
+    // event listener fires.
+    if (viewId !== "logView" && barcodeModalBackdrop.classList.contains("open")) {
+      closeBarcodeModal();
+    }
     document.getElementById("logView").style.display = viewId === "logView" ? "" : "none";
     document.getElementById("supplementsView").style.display = viewId === "supplementsView" ? "" : "none";
     document.getElementById("microView").style.display = viewId === "microView" ? "" : "none";

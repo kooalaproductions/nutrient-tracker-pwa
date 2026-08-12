@@ -91,5 +91,33 @@
     "fixedBy": "claude",
     "fixedDate": "2026-08-10",
     "fixNotes": "Gave the contributor name span its own .micro-contributor-name class (flex: 1; min-width: 0; overflow-wrap: break-word) and the amount span .micro-contributor-amount (flex: 0 0 auto; white-space: nowrap), matching the .log-entry-info flex:1/min-width:0 pattern already used elsewhere for the same space-between-with-long-text layout. Long names now wrap instead of overflowing; the amount stays fixed on the right."
+  },
+  {
+    "id": "bug_008",
+    "date": "2026-08-12",
+    "severity": "critical",
+    "status": "fixed",
+    "area": "logic",
+    "title": "Camera stream leak on rapid barcode-scan cancel",
+    "description": "stopBarcodeScanner() guarded on both html5QrcodeInstance AND barcodeScannerRunning being truthy before calling instance.stop(). html5QrcodeInstance is assigned synchronously right after Html5Qrcode construction, before start() is even invoked, but barcodeScannerRunning only flips true inside start()'s .then() once the promise resolves. In the window between construction and that resolution (camera permission prompt / device init), an instance exists but barcodeScannerRunning is still false -- if the user tapped Cancel fast enough during that window, stopBarcodeScanner() hit the early-return branch and never called instance.stop(), leaking the camera stream in the background (battery drain, camera indicator staying lit, privacy concern). Caught by qa-reviewer targeted audit of the new barcode-scanning feature.",
+    "affectedLines": "index.html, function stopBarcodeScanner()",
+    "foundBy": "qa-reviewer",
+    "fixedBy": "claude",
+    "fixedDate": "2026-08-12",
+    "fixNotes": "Changed the guard to check html5QrcodeInstance alone, not also barcodeScannerRunning -- Html5Qrcode.stop() is already safe to call on a not-yet-fully-started instance (the existing .catch() covers \"already stopped / never fully started\"), so calling it unconditionally whenever an instance object exists is correct and has no downside."
+  },
+  {
+    "id": "bug_009",
+    "date": "2026-08-12",
+    "severity": "warning",
+    "status": "fixed",
+    "area": "ui",
+    "title": "Barcode scan buttons below 44px touch target convention",
+    "description": "#scanBarcodeBtn and #barcodeModalCancel used the shared button.secondary class (padding:12px, no explicit min-height), landing a bit short of this app's established 44px touch-target convention already used by .remove-btn/.check-row/.cal-nav-btn/.micro-contributors-toggle/etc. Caught by qa-reviewer targeted audit of the new barcode-scanning feature.",
+    "affectedLines": "index.html, CSS near #barcodeScannerContainer",
+    "foundBy": "qa-reviewer",
+    "fixedBy": "claude",
+    "fixedDate": "2026-08-12",
+    "fixNotes": "Added min-height:44px scoped to #scanBarcodeBtn and #barcodeModalCancel specifically, rather than widening the shared button.secondary class everywhere it's already used across the app."
   }
 ]
