@@ -202,6 +202,24 @@ These agents live in `.claude/agents/` and are auto-available every session.
       — verified across all 79 foods via 10 executable tests. Live-
       tested on the exact milk case from the screenshot plus a 2-cup
       food (spinach); both now read Amount:1/Unit:servings correctly.)
+- [x] index.html — manual micronutrient entry on custom foods
+      (closes the gap where custom foods added via the manual form had
+      zero micronutrient data, unlike foods.json/barcode-scanned items.
+      A small fixed set of 8 nutrients users care about most — Vitamin D,
+      Vitamin B12, Calcium, Iron, Magnesium, Potassium, Vitamin C, Zinc —
+      chosen over a full 30-field form (user picked this scope explicitly).
+      New collapsible "Add micronutrients (optional)" section in the
+      custom-food form, reusing the existing toggle-row/form-body pattern;
+      sparse-write on save (only real positive values are stored, matching
+      the app's established convention everywhere else); barcode-scan
+      pre-fill now writes these 8 keys directly into the editable inputs
+      instead of the read-only-only preview, auto-expanding the section,
+      and excludes them from the read-only "Also found via scan" list to
+      avoid duplicate display. qa-reviewer independent audit: no findings.
+      Live-tested end-to-end: saved a custom food with all 8 fields
+      filled, logged it, and confirmed all 8 nutrients appeared correctly
+      in the Micros view with correct values, percentages, and a working
+      "Show 1 item" contributor breakdown pointing back to the food.)
 
 ### 🔲 Pending (priority order)
 - [ ] iPhone home screen install + real device test

@@ -404,6 +404,16 @@
     line-height: 1.45;
   }
   .scanned-micro-preview strong { color: var(--text); }
+
+  /* micronutrients sub-section inside "Add a custom food" (8 fixed, optional,
+     editable fields -- see CUSTOM_FOOD_MICRO_FIELDS). Reuses .toggle-row/
+     .chevron/.form-body exactly like #addFoodToggle/#addFoodForm above, just
+     nested one level deeper. #addFoodMicroToggle gets its own scoped
+     min-height the same way #scanBarcodeBtn/#barcodeModalCancel did (see
+     comment above) since the shared .toggle-row class has no built-in
+     touch-target floor. */
+  #addFoodMicroToggle { min-height: 44px; }
+  .micro-fields-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
 </style>
 </head>
 <body>
@@ -502,6 +512,22 @@
         <div><label for="f_sugar">Sugar (g)</label><input type="number" id="f_sugar" min="0" step="any" /></div>
         <div><label for="f_fiber">Fiber (g)</label><input type="number" id="f_fiber" min="0" step="any" /></div>
         <div><label for="f_sodium">Sodium (mg)</label><input type="number" id="f_sodium" min="0" step="any" /></div>
+      </div>
+      <div class="toggle-row" id="addFoodMicroToggle">
+        <span class="micro-fields-label">Add micronutrients (optional)</span>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="form-body" id="addFoodMicroSection">
+        <div class="form-grid">
+          <div><label for="f_vitamind">Vitamin D (mcg)</label><input type="number" id="f_vitamind" min="0" step="any" /></div>
+          <div><label for="f_vitaminb12">Vitamin B12 (mcg)</label><input type="number" id="f_vitaminb12" min="0" step="any" /></div>
+          <div><label for="f_calcium">Calcium (mg)</label><input type="number" id="f_calcium" min="0" step="any" /></div>
+          <div><label for="f_iron">Iron (mg)</label><input type="number" id="f_iron" min="0" step="any" /></div>
+          <div><label for="f_magnesium">Magnesium (mg)</label><input type="number" id="f_magnesium" min="0" step="any" /></div>
+          <div><label for="f_potassium">Potassium (mg)</label><input type="number" id="f_potassium" min="0" step="any" /></div>
+          <div><label for="f_vitaminc">Vitamin C (mg)</label><input type="number" id="f_vitaminc" min="0" step="any" /></div>
+          <div><label for="f_zinc">Zinc (mg)</label><input type="number" id="f_zinc" min="0" step="any" /></div>
+        </div>
       </div>
       <div class="scanned-micro-preview" id="f_scannedMicroPreview" style="display:none;"></div>
       <button class="primary" id="saveFoodBtn">Save food</button>
@@ -717,6 +743,26 @@
     "chromium_mcg", "copper_mcg", "fluoride_mg", "iodine_mcg", "iron_mg",
     "magnesium_mg", "manganese_mg", "molybdenum_mcg", "phosphorus_mg", "potassium_mg",
     "selenium_mcg", "sodium_mg", "zinc_mg", "omega3_mg", "cholesterol_mg"
+  ];
+
+  // The 8 of the 30 MICRONUTRIENT_KEYS that get a full, editable, optional
+  // input field in the "Add a custom food" form's collapsible micronutrients
+  // section (#addFoodMicroSection) -- the other 22 stay scan-only / read-only
+  // (see renderScannedMicroPreview()). id: the form input's DOM id; key: the
+  // MICRONUTRIENT_KEYS entry that input's value is saved under. Shared by the
+  // saveFoodBtn handler (reads these inputs sparsely, like every other
+  // micronutrient field in this app) and openCustomFoodFormWithScanResult()
+  // (pre-fills these same inputs from a scan instead of routing them through
+  // pendingScannedMicronutrients).
+  var CUSTOM_FOOD_MICRO_FIELDS = [
+    { id: "f_vitamind", key: "vitamind_mcg" },
+    { id: "f_vitaminb12", key: "vitaminb12_mcg" },
+    { id: "f_calcium", key: "calcium_mg" },
+    { id: "f_iron", key: "iron_mg" },
+    { id: "f_magnesium", key: "magnesium_mg" },
+    { id: "f_potassium", key: "potassium_mg" },
+    { id: "f_vitaminc", key: "vitaminc_mg" },
+    { id: "f_zinc", key: "zinc_mg" }
   ];
 
   // ---------- unit conversion (log a food in an alternate unit) ----------
@@ -2916,6 +2962,20 @@
     if (!addFoodForm.classList.contains("open")) clearScannedMicroPreview();
   });
 
+  // Collapsible "Add micronutrients (optional)" sub-section inside the
+  // custom-food form (see CUSTOM_FOOD_MICRO_FIELDS) -- same .toggle-row +
+  // .form-body open/close mechanism as addFoodToggle/addFoodForm above, just
+  // nested one level deeper. Deliberately does NOT clear the 8 fields'
+  // values on manual collapse (matches this form's existing convention: the
+  // macro fields above aren't cleared on cancel/close either -- only a
+  // successful save resets any of it, see saveFoodBtn's handler below).
+  var addFoodMicroToggle = document.getElementById("addFoodMicroToggle");
+  var addFoodMicroSection = document.getElementById("addFoodMicroSection");
+  addFoodMicroToggle.addEventListener("click", function () {
+    addFoodMicroToggle.classList.toggle("open");
+    addFoodMicroSection.classList.toggle("open");
+  });
+
   // Shows/hides the two conditional fields in the "Add a custom food" form
   // based on which unit type is selected in f_servingUnitType, so the form
   // only asks for what's actually needed/usable for that unit category:
@@ -2995,9 +3055,25 @@
       sodium_mg: Number(document.getElementById("f_sodium").value) || 0,
       custom: true
     };
-    // Merge in any sparse micronutrient fields a barcode scan found (see the
-    // barcode scanner section below) -- read-only in the form, but still
-    // saved onto the food record same as every other field here.
+    // The 8 fixed micronutrient fields (see CUSTOM_FOOD_MICRO_FIELDS) are
+    // read directly from their inputs -- sparse, matching this app's
+    // established micronutrient convention everywhere else: a key is only
+    // set if there's a real, positive value, never defaulted to 0 for an
+    // unfilled field. Covers both purely manual entry and
+    // scan-prefilled-then-possibly-edited values (see
+    // openCustomFoodFormWithScanResult(), which prefills these same inputs
+    // directly instead of routing them through pendingScannedMicronutrients).
+    CUSTOM_FOOD_MICRO_FIELDS.forEach(function (f) {
+      var el = document.getElementById(f.id);
+      var val = Number(el.value);
+      if (el.value !== "" && val > 0) food[f.key] = val;
+    });
+    // Merge in any sparse micronutrient fields a barcode scan found for the
+    // OTHER (non-fixed-8) keys (see the barcode scanner section below) --
+    // read-only in the form, but still saved onto the food record same as
+    // every other field here. pendingScannedMicronutrients never carries the
+    // fixed 8 keys (see openCustomFoodFormWithScanResult()), so this can't
+    // clobber the values just read above.
     if (pendingScannedMicronutrients) {
       Object.keys(pendingScannedMicronutrients).forEach(function (k) {
         food[k] = pendingScannedMicronutrients[k];
@@ -3005,7 +3081,8 @@
     }
     state.customFoods.push(food);
     saveCustomFoods();
-    ["f_name", "f_brand", "f_servingUnitCustom", "f_gramsPerServing", "f_calories", "f_protein", "f_carbs", "f_fat", "f_sugar", "f_fiber", "f_sodium"].forEach(function (id) {
+    ["f_name", "f_brand", "f_servingUnitCustom", "f_gramsPerServing", "f_calories", "f_protein", "f_carbs", "f_fat", "f_sugar", "f_fiber", "f_sodium",
+     "f_vitamind", "f_vitaminb12", "f_calcium", "f_iron", "f_magnesium", "f_potassium", "f_vitaminc", "f_zinc"].forEach(function (id) {
       document.getElementById(id).value = "";
     });
     document.getElementById("f_servingSize").value = 1;
@@ -3013,6 +3090,8 @@
     updateCustomFoodUnitFields();
     addFoodToggle.classList.remove("open");
     addFoodForm.classList.remove("open");
+    addFoodMicroToggle.classList.remove("open");
+    addFoodMicroSection.classList.remove("open");
     clearScannedMicroPreview(); // successful save -- never let scanned data leak into a later manual entry
     renderFoodList();
     showToast("Saved " + food.name);
@@ -3187,11 +3266,34 @@
     document.getElementById("f_fiber").value = food.fiber_g != null ? food.fiber_g : "";
     document.getElementById("f_sodium").value = food.sodium_mg != null ? food.sodium_mg : "";
 
-    // Collect whichever of the 30 possible micronutrient keys this scan
-    // actually found (sparse -- only real values, never defaulted to 0) for
-    // the read-only preview list below.
+    // Pre-fill the 8 fixed micronutrient fields (see CUSTOM_FOOD_MICRO_FIELDS)
+    // directly into their editable inputs, exactly like the macro fields
+    // above -- scan pre-fills, user can review/edit before saving. Auto-expand
+    // the collapsible section when any of the 8 were found so the user sees
+    // them without an extra tap (same "assist, don't hide" reasoning that
+    // already applies to the macro fields being visible by default).
+    var foundFixedMicro = false;
+    CUSTOM_FOOD_MICRO_FIELDS.forEach(function (f) {
+      if (food[f.key] != null) {
+        document.getElementById(f.id).value = food[f.key];
+        foundFixedMicro = true;
+      }
+    });
+    if (foundFixedMicro) {
+      addFoodMicroToggle.classList.add("open");
+      addFoodMicroSection.classList.add("open");
+    }
+
+    // Collect whichever of the REMAINING (non-fixed-8) micronutrient keys
+    // this scan actually found (sparse -- only real values, never defaulted
+    // to 0) for the read-only preview list below. The fixed 8 are
+    // deliberately excluded here -- they're now full editable fields
+    // (prefilled above), so surfacing them again in "Also found via scan"
+    // would just be a redundant, out-of-sync second copy of the same value.
+    var fixedMicroKeys = CUSTOM_FOOD_MICRO_FIELDS.map(function (f) { return f.key; });
     var found = {};
     MICRONUTRIENT_KEYS.forEach(function (k) {
+      if (fixedMicroKeys.indexOf(k) !== -1) return;
       if (food[k] != null) found[k] = food[k];
     });
     pendingScannedMicronutrients = Object.keys(found).length > 0 ? found : null;
