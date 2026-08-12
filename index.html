@@ -80,6 +80,7 @@
     gap: 8px;
   }
   .stat { text-align: center; }
+  .stat[data-key] { cursor: pointer; }
   .stat .value { font-size: 16px; font-weight: 700; color: var(--accent); }
   .stat .label { font-size: 10.5px; color: var(--text-secondary); margin-top: 2px; }
   .stat .sub { font-size: 9.5px; color: var(--text-secondary); margin-top: 2px; }
@@ -619,6 +620,22 @@
       <button class="secondary" id="modalCancel">Cancel</button>
       <button class="primary" id="modalConfirm">Log it</button>
     </div>
+  </div>
+</div>
+
+<!-- Today's-totals macro tile -> "which logged foods contributed" popup.
+     Reuses the same title+X-close-button pattern as #barcodeModalBackdrop /
+     #settingsBackdrop, and the same .micro-contributor-item markup already
+     used by microRowHtml()'s per-row expandable breakdown -- see
+     openMacroContributorsModal() near openLogModal()/closeModal(). -->
+<div class="modal-backdrop" id="macroContributorsModalBackdrop">
+  <div class="modal">
+    <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+      <h3 id="macroContributorsModalTitle"></h3>
+      <button class="modal-close-btn" id="macroContributorsModalCloseBtn" type="button" aria-label="Close">✕</button>
+    </div>
+    <p class="modal-sub" id="macroContributorsModalSub"></p>
+    <div id="macroContributorsModalList"></div>
   </div>
 </div>
 
@@ -1690,18 +1707,24 @@
     return totals;
   }
 
-  // Per-entry breakdown for a single micronutrient key on dateString --
-  // complements getDailyFoodMicronutrientTotals() / getDailySupplementMicronutrientTotals()
-  // (which only return the aggregate food-vs-supplement totals) by exposing
-  // exactly which logged items contributed to that total and how much each
-  // one contributed. Intended for a future expandable micronutrient row UI
-  // ("this 422mg of potassium today came from: banana 300mg, ...").
+  // Per-entry breakdown for a single nutrient key on dateString -- works for
+  // any MICRONUTRIENT_KEYS entry (complementing getDailyFoodMicronutrientTotals()/
+  // getDailySupplementMicronutrientTotals(), which only return the aggregate
+  // food-vs-supplement totals) AND any NUTRIENT_KEYS macro (calories,
+  // protein_g, etc.), exposing exactly which logged items contributed to a
+  // given total and how much each one contributed ("this 422mg of potassium
+  // today came from: banana 300mg, ..." / "this 62g of protein came from:
+  // chicken breast 35g, ...").
   //
   // Uses the same entry[key] * entry.multiplier math and the same "food
   // entries have no type field, supplement entries are type: 'supplement'"
   // convention documented at logSupplement() (see above) that the three
-  // total functions above already rely on.
-  function getMicronutrientContributors(dateString, key) {
+  // total functions above already rely on. The amount > 0 filter matters
+  // specifically for macro keys: unlike sparse micronutrient fields (present
+  // only when real data exists), NUTRIENT_KEYS are always defaulted to 0 on
+  // every entry (see addLogEntry()), so without this filter every food
+  // logged today would show up as a "0g fiber" contributor to fiber, etc.
+  function getContributorsForKey(dateString, key) {
     var entries = state.logEntries[dateString] || [];
     var contributors = entries
       .filter(function (e) { return e[key] != null; })
@@ -1713,7 +1736,8 @@
           type: isSupplement ? "supplement" : "food",
           amount: Number(e[key]) * e.multiplier
         };
-      });
+      })
+      .filter(function (c) { return c.amount > 0; });
     contributors.sort(function (a, b) { return b.amount - a.amount; });
     return contributors;
   }
@@ -1984,7 +2008,7 @@
     }
 
     return (
-      '<div class="stat">' +
+      '<div class="stat" data-key="' + r.key + '">' +
         '<div class="value" style="color:' + tileColor + ';">' + valueText + '</div>' +
         '<div class="label">' + labelText + '</div>' +
         subHtml +
@@ -1996,6 +2020,14 @@
   function renderTotals() {
     var container = document.getElementById("totalsGrid");
     container.innerHTML = getTodayGoalProgress().map(totalsTileHtml).join("");
+    // Re-wire tap-to-see-contributors on every regenerated tile -- innerHTML
+    // above discards any previously attached listeners, same pattern as
+    // renderEntryRows()'s .remove-btn re-wiring after its innerHTML render.
+    container.querySelectorAll(".stat").forEach(function (el) {
+      el.addEventListener("click", function () {
+        openMacroContributorsModal(el.getAttribute("data-key"));
+      });
+    });
   }
 
   function renderEntryRows(container, entries, dateKey) {
@@ -2310,7 +2342,7 @@
       // Attach today's per-entry breakdown (which foods/supplements
       // contributed and how much) so microRowHtml() can render an
       // expandable "Show N item(s)" detail without a second data pass.
-      r.contributors = getMicronutrientContributors(todayKey(), r.key);
+      r.contributors = getContributorsForKey(todayKey(), r.key);
       rowsByKey[r.key] = r;
     });
 
@@ -2550,6 +2582,61 @@
     }
     addLogEntry(state.pendingFood, multiplier);
     closeModal();
+  });
+
+  // ---------- macro-tile contributors modal (Today's totals -> tap a tile) ----------
+  // Same generic getContributorsForKey(dateString, key) data layer the Micros
+  // view's per-row "Show N items" breakdown uses (see microRowHtml()), just
+  // surfaced in a modal popup instead of an inline <details> -- the totals
+  // card's .stat tiles are too narrow (~74-160px) for an inline expand.
+  var macroContributorsModalBackdrop = document.getElementById("macroContributorsModalBackdrop");
+
+  // Opens the contributors modal for one NUTRIENT_KEYS macro key (calories,
+  // protein_g, carbs_g, fat_g, sugar_g, fiber_g, sodium_mg). Mirrors
+  // renderMicroView()'s "attach contributors, then render" flow and
+  // microRowHtml()'s .micro-contributor-item markup exactly, so this new
+  // popup looks and behaves consistently with the existing Micros page.
+  function openMacroContributorsModal(key) {
+    if (!key) return;
+    var unit = NUTRIENT_UNITS[key] || "";
+    var isCalories = unit === "kcal";
+    var total = computeTotals(state.logEntries[todayKey()] || [])[key];
+
+    document.getElementById("macroContributorsModalTitle").textContent = NUTRIENT_LABELS[key] || key;
+    // Calories keeps a space before its unit ("1850 kcal today"), matching
+    // renderEntryRows()'s existing "fmt(e.calories * e.multiplier) + ' kcal'"
+    // convention; every other key appends its unit directly with no space
+    // ("62g today", "1200mg today"), matching totalsTileHtml()'s
+    // "fmt(r.consumed) + unitSuffix" convention.
+    document.getElementById("macroContributorsModalSub").textContent =
+      isCalories ? (fmt(total) + " kcal today") : (fmt(total) + unit + " today");
+
+    var contributors = getContributorsForKey(todayKey(), key);
+    var listEl = document.getElementById("macroContributorsModalList");
+    if (contributors.length === 0) {
+      listEl.innerHTML = '<div class="empty">Nothing logged yet.</div>';
+    } else {
+      listEl.innerHTML = contributors.map(function (c) {
+        var icon = c.type === "supplement" ? "💊" : "🥗";
+        var brandHtml = c.brand ? ' <span class="micro-contributor-brand">(' + escapeHtml(c.brand) + ')</span>' : "";
+        var amountText = isCalories ? (fmt(c.amount) + " kcal") : (fmt(c.amount) + unit);
+        return (
+          '<div class="micro-contributor-item">' +
+            '<span class="micro-contributor-name">' + icon + ' ' + escapeHtml(c.name) + brandHtml + '</span>' +
+            '<span class="micro-contributor-amount">' + amountText + '</span>' +
+          '</div>'
+        );
+      }).join("");
+    }
+
+    macroContributorsModalBackdrop.classList.add("open");
+  }
+  function closeMacroContributorsModal() {
+    macroContributorsModalBackdrop.classList.remove("open");
+  }
+  document.getElementById("macroContributorsModalCloseBtn").addEventListener("click", closeMacroContributorsModal);
+  macroContributorsModalBackdrop.addEventListener("click", function (e) {
+    if (e.target === macroContributorsModalBackdrop) closeMacroContributorsModal();
   });
 
   // ---------- supplement modal ----------

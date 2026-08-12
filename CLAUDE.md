@@ -220,6 +220,35 @@ These agents live in `.claude/agents/` and are auto-available every session.
       filled, logged it, and confirmed all 8 nutrients appeared correctly
       in the Micros view with correct values, percentages, and a working
       "Show 1 item" contributor breakdown pointing back to the food.)
+- [x] index.html — tap a macro tile to see its contributors
+      (mirrors the Micros view's existing "which items contributed to this
+      nutrient" breakdown onto the Today's totals card — Calories, Protein,
+      Carbs, Fat, Sugar, Fiber, Sodium. Design choice, confirmed with the
+      user: unlike the Micros page's full-width rows, the totals card's
+      .stat tiles are narrow grid cells (~74-160px), too cramped for an
+      inline expand, so tapping a tile opens a small modal instead, reusing
+      the same .micro-contributor-item markup and the app's existing
+      title+X-close-button modal pattern. The underlying per-entry
+      contributor lookup (previously getMicronutrientContributors(), used
+      only by the Micros view) was generalized and renamed to
+      getContributorsForKey() -- it already worked generically off any
+      log-entry key, but needed one addition to be correct for macros: a
+      `amount > 0` filter, since NUTRIENT_KEYS (unlike sparse micronutrient
+      fields) are always defaulted to 0 on every entry, so without the
+      filter every food logged today would show up as a "0g fiber"
+      contributor to every macro it doesn't have. qa-reviewer independent
+      audit: no findings, including confirming the filter is a no-op for
+      the existing micronutrient caller and that the read-only History
+      modal's totals tiles (a different, untouched function,
+      totalsGridHtml()) correctly stay non-interactive. Live-tested end-to-
+      end (including working around a real service-worker cache-staleness
+      false alarm mid-test, resolved via the documented cache-clear
+      sequence): logged two foods, tapped Protein/Calories/Carbs/Fat tiles,
+      confirmed correct totals, correct multi-item sort order, correct
+      empty state ("Nothing logged yet.") for a macro with nothing logged,
+      backdrop-click-to-close, and confirmed zero regression on both the
+      History modal's totals tiles and the Micros view's own contributor
+      breakdown.)
 
 ### 🔲 Pending (priority order)
 - [ ] iPhone home screen install + real device test
