@@ -783,8 +783,22 @@
   }
 
   // Returns the unit options a future logging-modal UI can safely offer for
-  // this specific food. Always includes "native" first (the food's own
-  // servingSize/servingUnit, e.g. "1 banana" or "0.5 avocado" or "1 cup").
+  // this specific food. Always includes "native" first, labeled plainly
+  // "servings" -- NOT "240 ml (1 cup)" or similar. That used to be the
+  // label (food.servingSize + " " + food.servingUnit), which put a raw
+  // number directly next to an Amount field defaulting to that SAME number
+  // (e.g. Amount: 240, Unit: "240 ml (1 cup)") -- confusing enough that a
+  // real user mistook it for "log 240 cups" (it wasn't; the old math was
+  // amount/servingSize, so 240 there correctly meant 1 serving -- but
+  // nothing in the UI communicated that). "native" now means "how many
+  // servings", full stop, consistent with every other unit option already
+  // meaning "how many of THIS unit" -- see convertLogQuantityToMultiplier()
+  // below, whose native case changed to match (amount IS the multiplier
+  // now, no division). What one serving actually equals (240 ml / 1 cup /
+  // 110 kcal) is still shown in the modal's meta line above the fields
+  // (see openLogModal()), so no information is lost, just not duplicated
+  // here in a way that reads as a quantity to type.
+  //
   // If food.gramsPerServing is real, positive data: adds weight alternates
   // g/oz/lb (kg omitted -- too coarse-grained for typical food portions),
   // and, when the food is itself volume-native, adds the OTHER volume units
@@ -795,7 +809,7 @@
   function getAvailableLogUnits(food) {
     var options = [{
       unit: "native",
-      label: String(food.servingSize) + " " + food.servingUnit
+      label: "servings"
     }];
 
     var hasGrams = typeof food.gramsPerServing === "number" &&
@@ -829,11 +843,19 @@
     amount = Number(amount);
     if (!(amount > 0)) return null;
 
-    // "native": e.g. banana servingSize=1, amount=2 native units -> 2; a food
-    // with servingSize=2 (e.g. spinach "2 cups"), amount=1 native "cups" ->
-    // 0.5, since the user only logged half the stated 2-cup serving.
+    // "native" means "number of servings" -- amount IS the multiplier
+    // directly, no division. (Previously this divided by food.servingSize,
+    // treating amount as a raw quantity in the food's own unit -- e.g. for
+    // milk at servingSize:240/"ml (1 cup)", that meant typing 240 to log
+    // one cup, with the Amount field and the Unit dropdown's label BOTH
+    // showing "240" right next to each other. Confusing enough that a real
+    // user mistook it for "log 240 servings". Now: amount=1 always means
+    // exactly one full stated serving, amount=2 means two, amount=0.5 means
+    // half -- consistent with how every other unit option here already
+    // works (amount = how many of THIS unit), and consistent with the
+    // default the log modal now pre-fills, see openLogModal().)
     if (unit === "native") {
-      return amount / food.servingSize;
+      return amount;
     }
 
     var hasGrams = typeof food.gramsPerServing === "number" &&
@@ -2426,9 +2448,13 @@
 
   // Opens the log modal for `food`. Rebuilds the unit dropdown fresh every
   // time (different foods offer different safe alternate units -- see
-  // getAvailableLogUnits()), defaults it to "native", and pre-fills the
-  // amount field with food.servingSize so the modal opens reading as "this
-  // is exactly 1 serving" before the user changes anything.
+  // getAvailableLogUnits()), defaults it to "native" ("servings"), and
+  // pre-fills the amount field with 1 -- "native" now always means "number
+  // of servings" (see convertLogQuantityToMultiplier()), so 1 always means
+  // exactly one full stated serving, for every food, regardless of what its
+  // servingSize number happens to be. What that serving actually equals
+  // (e.g. "240 ml (1 cup)") is shown in the meta line right below the name,
+  // not repeated in the Amount/Unit fields themselves.
   function openLogModal(food) {
     state.pendingFood = food;
     document.getElementById("modalFoodName").textContent = food.name;
@@ -2440,7 +2466,7 @@
       return '<option value="' + escapeHtml(o.unit) + '">' + escapeHtml(o.label) + '</option>';
     }).join("");
     modalUnitSelect.value = "native";
-    modalAmountInput.value = food.servingSize;
+    modalAmountInput.value = 1;
 
     modalBackdrop.classList.add("open");
   }
@@ -2449,15 +2475,15 @@
     state.pendingFood = null;
   }
   // Re-suggests a sensible amount whenever the unit changes, so the field is
-  // never left empty/invalid: back to the native serving size for "native",
-  // or the amount of the newly selected unit that equals 1 full native
-  // serving otherwise (e.g. switching to "g" pre-fills food.gramsPerServing).
+  // never left empty/invalid: back to 1 (one serving) for "native", or the
+  // amount of the newly selected unit that equals 1 full native serving
+  // otherwise (e.g. switching to "g" pre-fills food.gramsPerServing).
   modalUnitSelect.addEventListener("change", function () {
     var food = state.pendingFood;
     if (!food) return;
     var unit = modalUnitSelect.value;
     if (unit === "native") {
-      modalAmountInput.value = food.servingSize;
+      modalAmountInput.value = 1;
       return;
     }
     var equivalent = oneNativeServingInUnit(food, unit);
