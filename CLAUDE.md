@@ -55,7 +55,7 @@ These agents live in `.claude/agents/` and are auto-available every session.
 - [x] Project structure and working directory established
 - [x] CLAUDE.md — project memory (this file)
 - [x] .claude/agents/ — 7 specialist agents
-- [x] bugs.json — persistent bug backlog (7 bugs logged, all fixed)
+- [x] bugs.json — persistent bug backlog (9 bugs logged, all fixed)
 - [x] foods.json — 74 preloaded items
       (Kirkland proteins, dairy, nuts, snacks, frozen, beverages,
       user daily foods: coffee, honey, 1% milk, apple, string
@@ -72,8 +72,11 @@ These agents live in `.claude/agents/` and are auto-available every session.
 - [x] rdas.json — Harvard RDA/AI table, 30 nutrients,
       personalized by age + sex
 - [x] manifest.json — PWA manifest (installable)
-- [x] sw.js — service worker v5
-      (caches all assets including rdas.json, offline-ready)
+- [x] sw.js — service worker v6
+      (caches all assets including rdas.json and html5-qrcode.min.js,
+      offline-ready; version bumped v5->v6 when the barcode-scanning
+      library was added, to force existing installed clients to
+      precache it promptly rather than wait on incidental revalidation)
 - [x] index.html — food browser with brand+name search
 - [x] index.html — manual nutrition entry form
 - [x] index.html — daily log view with macro totals card
@@ -148,16 +151,54 @@ These agents live in `.claude/agents/` and are auto-available every session.
       across all 74 foods; live-tested logging oatmeal in grams —
       83 kcal + all 9 micronutrients exactly matched hand-calculated
       halves of the native 1-cup serving.)
+- [x] index.html — scan a barcode to add a food (camera + Open Food Facts)
+      (first-ever camera feature and first-ever live external network
+      dependency in this app. html5-qrcode.min.js vendored locally
+      (not CDN-loaded) so the scanner UI stays usable offline; free,
+      no-API-key lookup against Open Food Facts, $0 ongoing cost.
+      fetchProductByBarcode()/mapOpenFoodFactsProductToFood() map a
+      scanned product to this app's schema as a 100g/gramsPerServing:100
+      food, plugging directly into the unit-conversion system with zero
+      new scaling logic. Unit conversion built on empirically-verified
+      API behavior (every OFF nutrient is normalized to grams
+      internally regardless of label unit) rather than assumed —
+      caught and fixed a real bug during validation: folate was
+      originally mapped to the wrong OFF key ("vitamin-b9", which
+      doesn't exist in real product data; real key is "folates",
+      confirmed via a live lookup). Never auto-saves — pre-fills the
+      existing "Add a custom food" form (plus a new optional brand
+      field) for review, with a read-only preview of any micronutrients
+      found. qa-reviewer caught a real CRITICAL bug pre-ship: a camera
+      stream leak if Cancel was tapped before the start() promise
+      resolved (bug_008, fixed same session). Live-tested end-to-end
+      via a mocked decode (real camera hardware not available in the
+      testing environment) — OFF lookup, form pre-fill, save, and
+      logging-in-alternate-units all verified correct against live
+      Open Food Facts data. Real on-device camera behavior still
+      needs a physical-phone test — see Pending.)
 
 ### 🔲 Pending (priority order)
+- [ ] Real on-device camera test for barcode scanning
+      (the scan-to-form-prefill logic is fully verified against live
+      Open Food Facts data via a mocked decode; the literal
+      camera-viewfinder-to-barcode-detection step, which is entirely
+      html5-qrcode's own responsibility, has not been exercised with
+      real camera hardware — test on an actual phone, including a
+      rapid-cancel tap to confirm bug_008's fix holds under a real
+      camera permission prompt, not just the simulated timing this
+      session tested)
 - [ ] iPhone home screen install + real device test
       (Option C — foundation is solid, needs on-device verify)
 - [ ] Weekly macro chart UI
       (getWeeklyMacroSummary() is ready, needs ui-builder pass)
 - [ ] Calcium upper limit age-split correction in rdas.json
       (currently flat 2500mg, should be 2000mg for age 51+)
-- [ ] Photo-based nutrition scanning
-      (Phase 2 — requires API integration, out of scope for local PWA)
+- [ ] OCR nutrition-label scanning
+      (fallback for foods/supplements without a scannable barcode;
+      scoped but not started — see PIPELINE.md-style discussion in
+      session history: on-device OCR via a library like Tesseract.js,
+      pre-filling the manual entry form same as the barcode flow,
+      never auto-saving given inconsistent label-photo OCR accuracy)
 
 ### 🐛 Bug Backlog (bugs.json)
 - bug_001 ✅ FIXED — exportAllDataAsJSON() missing profile/goals
@@ -173,6 +214,11 @@ These agents live in `.claude/agents/` and are auto-available every session.
   was 40px, below the app's 44px convention
 - bug_007 ✅ FIXED — contributor item names had no flex/min-width,
   risking horizontal overflow on narrow viewports
+- bug_008 ✅ FIXED — camera stream leak if barcode-scan Cancel was
+  tapped before the start() promise resolved (guard checked a flag
+  that only flips true after start() succeeds, skipping stop())
+- bug_009 ✅ FIXED — barcode-scan buttons were ~38px, below the app's
+  44px touch-target convention
 
 ### Known Gaps (not bugs, design decisions to revisit)
 - QA qa-reviewer audit of micronutrient feature not yet run
