@@ -289,10 +289,6 @@ These agents live in `.claude/agents/` and are auto-available every session.
       rather than inventing form fields the function doesn't support.)
 
 ### 🔲 Pending (priority order)
-- [ ] pwa-specialist: add goals.json to sw.js's PRECACHE_URLS
-      (bug_013 — until this lands, a user offline on first load gets
-      state.goalProfiles=[] with no retry, silently collapsing every
-      goal's calorie deficit/surplus to flat maintenance calories)
 - [ ] iPhone home screen install + real device test
       (Option C — foundation is solid, needs on-device verify)
 - [ ] Weekly macro chart UI
@@ -337,9 +333,9 @@ These agents live in `.claude/agents/` and are auto-available every session.
   by keyboard/screen-reader; totalsTileHtml() now emits a real
   <button> (matches food-row/cal-day/recent-day-chip convention),
   giving native Enter/Space activation with no separate keydown handler
-- bug_013 🔲 OPEN (warning/pwa) — goals.json missing from sw.js's
-  PRECACHE_URLS; Nutrition Coach silently degrades to flat maintenance
-  calories if the user is offline on first load after this update
+- bug_013 ✅ FIXED — goals.json was missing from sw.js's PRECACHE_URLS;
+  added it (grouped with the other data files) and bumped CACHE_NAME
+  v6 → v7 so installed devices pick up the change
 
 ### Known Gaps (not bugs, design decisions to revisit)
 - QA qa-reviewer audit of micronutrient feature not yet run
