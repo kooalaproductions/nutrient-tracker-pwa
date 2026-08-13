@@ -425,6 +425,71 @@
      touch-target floor. */
   #addFoodMicroToggle { min-height: 44px; }
   .micro-fields-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+
+  /* ---------- Nutrition Coach ---------- */
+  /* Goal-picker cards (onboarding + settings, via renderHealthGoalCards()).
+     Selected state matches .cal-day.today's inset-accent-border technique
+     (a real box-shadow ring rather than changing layout with a wider border)
+     combined with .micro-badge.met's accent-light fill, plus an explicit
+     checkmark badge per this feature's brief. */
+  .goal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+  .goal-card {
+    position: relative;
+    text-align: left;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 30px 10px 12px;
+    min-height: 44px;
+    font: inherit;
+    color: inherit;
+    -webkit-appearance: none;
+  }
+  .goal-card.selected { border-color: var(--accent); background: var(--accent-light); box-shadow: inset 0 0 0 1px var(--accent); }
+  .goal-card-emoji { font-size: 22px; line-height: 1; }
+  .goal-card-label { font-weight: 600; font-size: 13.5px; margin-top: 4px; }
+  .goal-card-tagline { font-size: 11.5px; color: var(--text-secondary); margin-top: 2px; }
+  .goal-card-check {
+    position: absolute; top: 8px; right: 8px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    font-size: 12px; font-weight: 700; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Onboarding-question / data-quality question cards (getOnboardingQuestions()).
+     "Why are we asking?" reuses .micro-contributors/.micro-contributors-toggle
+     (native <details>, already used by microRowHtml()) rather than a new
+     disclosure mechanism. */
+  .coach-question-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .coach-question-card:last-child { margin-bottom: 0; }
+
+  /* Coaching-insight cards (getCoachingInsights()) -- left border color by type. */
+  .coach-insight-card {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+  .coach-insight-card:last-child { margin-bottom: 0; }
+
+  /* button.secondary/.primary already meet 44px via their own padding except
+     where content is short -- these scoped rules follow the same established
+     pattern as #scanBarcodeBtn/#barcodeModalCancel/#addFoodMicroToggle above
+     (shared classes falling a bit short, fixed per-id/class rather than
+     widening the shared rule everywhere it's used). */
+  #coachGenerateMealPlanBtn, #coachRegeneratePlanBtn, #coachSavePlanBtn,
+  .coach-log-meal-btn, #coachCheckinSaveBtn, #coachCompleteProfileBtn,
+  .coach-suggestion-row, #coachDataQualityContent .food-row {
+    min-height: 44px;
+  }
 </style>
 </head>
 <body>
@@ -598,6 +663,55 @@
 
   </div>
 
+  <div id="coachView" style="display:none">
+
+  <section class="card" id="coachCheckinCard" style="display:none">
+    <h2>⚖️ Weekly Check-In</h2>
+    <div class="form-grid">
+      <div>
+        <label for="coachCheckinWeight">Current weight</label>
+        <input type="number" id="coachCheckinWeight" min="0" step="any" inputmode="decimal" />
+      </div>
+      <div>
+        <label>Unit</label>
+        <div id="coachCheckinUnitLabel" style="padding:11px 0; font-size:14px; color:var(--text-secondary);"></div>
+      </div>
+    </div>
+    <button class="primary" id="coachCheckinSaveBtn" type="button" style="margin-top:10px;">Save &amp; Update Target</button>
+  </section>
+
+  <section class="card" id="coachHeaderCard">
+    <div id="coachHeaderContent"></div>
+  </section>
+
+  <section class="card">
+    <h2>🎯 Complete Your Nutrients</h2>
+    <div id="coachMissingNutrients"></div>
+  </section>
+
+  <section class="card">
+    <h2>💡 Today's Coaching</h2>
+    <div id="coachInsights"></div>
+  </section>
+
+  <section class="card">
+    <h2>📋 Suggested Meal Plan</h2>
+    <button class="primary" id="coachGenerateMealPlanBtn" type="button">Generate My Meal Plan</button>
+    <div id="coachMealPlanResult"></div>
+  </section>
+
+  <section class="card">
+    <details class="micro-contributors" id="coachDataQualityDetails">
+      <summary class="micro-contributors-toggle">
+        <span>📊 Improve Your Data</span>
+        <span class="chevron">▾</span>
+      </summary>
+      <div id="coachDataQualityContent"></div>
+    </details>
+  </section>
+
+  </div>
+
 </main>
 
 <nav class="bottom-nav" id="bottomNav">
@@ -609,6 +723,9 @@
   </button>
   <button class="nav-btn" id="navMicroBtn" data-view="microView" type="button">
     <span class="nav-icon">🧬</span><span>Micros</span>
+  </button>
+  <button class="nav-btn" id="navCoachBtn" data-view="coachView" type="button">
+    <span class="nav-icon">🧠</span><span>Coach</span>
   </button>
 </nav>
 
@@ -714,6 +831,9 @@
     <h3>Let's personalize your goals</h3>
     <p class="modal-sub">A few details so we can calculate calorie and nutrient targets for you.</p>
     <div id="onboardingFormMount"></div>
+    <div class="micro-fields-label" style="margin-top:14px; margin-bottom:2px;">What are your health goals? (up to 3)</div>
+    <div id="onboardingHealthGoalsMount"></div>
+    <div id="onboardingQuestionsMount"></div>
     <button class="primary" id="onboardingSubmitBtn" style="margin-top:6px;">Get started</button>
     <button class="onboarding-skip-btn" id="onboardingSkipBtn" type="button">Skip for now</button>
   </div>
@@ -729,6 +849,12 @@
     <h2 style="margin-top:6px;">Profile</h2>
     <div id="settingsProfileFormMount" style="display:flex; flex-direction:column; gap:10px;"></div>
     <button class="primary" id="settingsSaveProfileBtn" style="margin-top:10px;">Save &amp; recalculate</button>
+
+    <div style="height:1px; background:var(--border); margin:18px 0;"></div>
+
+    <h2>Health goals</h2>
+    <p class="modal-sub" style="margin-top:-6px;">Choose up to 3 focus areas for your coach.</p>
+    <div id="settingsHealthGoalsMount"></div>
 
     <div style="height:1px; background:var(--border); margin:18px 0;"></div>
 
@@ -755,6 +881,13 @@
   var STORAGE_PROFILE = "nt_profile";
   var STORAGE_GOALS = "nt_goals";
   var STORAGE_DISPLAY_PREFS = "nt_displayPrefs";
+  // Nutrition Coach feature (new): STORAGE_GOALS/"nt_goals" above is already
+  // in use by the existing per-nutrient calorie/macro goal-override feature
+  // (loadGoals()/saveGoals()/getTodayGoalProgress()) -- deliberately NOT
+  // reused here. The Coach's selected health-goal-profile IDs (goals.json)
+  // get their own key instead.
+  var STORAGE_HEALTH_GOALS = "nt_healthGoals";
+  var STORAGE_MEALPLAN = "nt_mealplan";
   var NUTRIENT_KEYS = ["calories", "protein_g", "carbs_g", "fat_g", "sugar_g", "fiber_g", "sodium_mg"];
 
   // The 30 micronutrient field names, matching foods.json's existing
@@ -1198,6 +1331,7 @@
     profile: null,     // populated at init() via loadProfile()
     goals: {},         // populated at init() via loadGoals()
     displayPrefs: {},  // populated at init() via loadDisplayPrefs()
+    goalProfiles: [],  // populated at init() via fetch("goals.json") -- Nutrition Coach's 7 health-goal profiles
     pendingFood: null,
     historyModalDateKey: null
   };
@@ -1902,6 +2036,640 @@
     };
   }
 
+  // ---------- Nutrition Coach ----------
+  // Reads/derives everything the Coach UI needs from goals.json's 7 health-
+  // goal profiles (state.goalProfiles) plus this app's existing profile/RDA/
+  // log-totals machinery. Deliberately does NOT touch STORAGE_GOALS/
+  // state.goals -- that's the existing per-nutrient goal-override feature,
+  // completely separate from health-goal selection here (see
+  // STORAGE_HEALTH_GOALS's comment above).
+
+  // Reads STORAGE_HEALTH_GOALS directly (not via state) so it works
+  // correctly even if called before/without any state.* population step --
+  // same reasoning as loadCustomFoods()/loadProfile() etc. reading
+  // localStorage directly, just without a matching state.* cache since
+  // nothing else in this file needs to hold health-goal IDs in memory yet.
+  function getActiveGoals() {
+    var ids;
+    try {
+      var raw = localStorage.getItem(STORAGE_HEALTH_GOALS);
+      ids = raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      ids = [];
+    }
+    if (!Array.isArray(ids) || ids.length === 0) return ["overall_wellness"];
+    return ids;
+  }
+
+  // Mifflin-St Jeor TDEE + calorie/macro targets, adjusted by the PRIMARY
+  // active health goal (activeGoalIds[0] -- "first selected = primary",
+  // the same convention generateMealPlan() below uses for meal structure so
+  // the two functions never disagree about which goal is "the" active one
+  // when several are selected) via that goal's primaryTargets.calorieDeficit
+  // (goals.json's own sign convention, documented in its description
+  // fields: positive = subtract from TDEE i.e. a deficit, negative = add
+  // i.e. a surplus -- weight_loss: 500, muscle_gain: -250).
+  //
+  // Macro split "implied by the goal": goals.json has no explicit %-split
+  // field, but primaryTargets.proteinMultiplier (g protein per lb
+  // bodyweight) IS an implied split -- and a more precise one than a flat
+  // percentage, since it scales with bodyweight directly rather than with
+  // calories. When present, protein is computed from that multiplier and
+  // the remaining calories are split carb:fat at 4:3 (the same relative
+  // proportion as the 40%:30% flat default below, so the two paths agree
+  // when proteinMultiplier happens to land protein near 30%). Falls back to
+  // the spec's flat 30/40/30 default when no active goal profile has a
+  // proteinMultiplier (shouldn't happen given goals.json's current 7
+  // profiles, but state.goalProfiles could be [] before its fetch resolves).
+  //
+  // Reuses this file's own LB_TO_KG/IN_TO_CM/ACTIVITY_MULTIPLIERS constants
+  // (defined above for the existing per-nutrient goals feature) so the two
+  // features can never drift on unit-conversion or activity-multiplier
+  // numbers.
+  //
+  // Returns null if profile is incomplete (no weight/height/age/sex) --
+  // callers must handle that (see getDailyTargets(), getOnboardingQuestions()).
+  function getUserTDEE() {
+    var p = state.profile;
+    if (!p || !p.weight || !p.height || !p.age || !p.sex) return null;
+
+    var weightKg = p.weightUnit === "kg" ? p.weight : p.weight * LB_TO_KG;
+    var weightLb = p.weightUnit === "lb" ? p.weight : p.weight / LB_TO_KG;
+    var heightCm = p.heightUnit === "cm" ? p.height : p.height * IN_TO_CM;
+
+    var bmr = p.sex === "male"
+      ? (10 * weightKg + 6.25 * heightCm - 5 * p.age + 5)
+      : (10 * weightKg + 6.25 * heightCm - 5 * p.age - 161);
+    var tdee = bmr * (ACTIVITY_MULTIPLIERS[p.activityLevel] || ACTIVITY_MULTIPLIERS.sedentary);
+
+    var primaryGoal = (state.goalProfiles || []).filter(function (g) { return g.id === getActiveGoals()[0]; })[0];
+    var pt = (primaryGoal && primaryGoal.primaryTargets) || {};
+    var calorieDeficit = pt.calorieDeficit || 0;
+    var targetCalories = tdee - calorieDeficit;
+
+    var proteinTarget, carbTarget, fatTarget;
+    if (pt.proteinMultiplier) {
+      proteinTarget = Math.round(pt.proteinMultiplier * weightLb);
+      var remainingCals = Math.max(0, targetCalories - proteinTarget * 4);
+      carbTarget = Math.round((remainingCals * (0.40 / 0.70)) / 4);
+      fatTarget = Math.round((remainingCals * (0.30 / 0.70)) / 9);
+    } else {
+      proteinTarget = Math.round((targetCalories * 0.30) / 4);
+      carbTarget = Math.round((targetCalories * 0.40) / 4);
+      fatTarget = Math.round((targetCalories * 0.30) / 9);
+    }
+
+    return {
+      tdee: Math.round(tdee),
+      targetCalories: Math.round(targetCalories),
+      proteinTarget: proteinTarget,
+      carbTarget: carbTarget,
+      fatTarget: fatTarget
+    };
+  }
+
+  // Combines getUserTDEE() with getUserRDA() for all 30 MICRONUTRIENT_KEYS,
+  // flagging "priority" nutrients as the union (merged + deduped) of every
+  // ACTIVE goal's priorityNutrients -- not just the primary one, since a
+  // user with e.g. both weight_loss and bone_health active should see both
+  // goals' priority nutrients flagged, even though only the primary goal
+  // drives the calorie/macro numbers above.
+  function getDailyTargets() {
+    var tdeeInfo = getUserTDEE();
+    var activeGoalIds = getActiveGoals();
+    var activeGoalProfiles = (state.goalProfiles || []).filter(function (g) {
+      return activeGoalIds.indexOf(g.id) !== -1;
+    });
+
+    var priorityKeys = {};
+    activeGoalProfiles.forEach(function (g) {
+      (g.priorityNutrients || []).forEach(function (k) { priorityKeys[k] = true; });
+    });
+
+    var micronutrients = {};
+    MICRONUTRIENT_KEYS.forEach(function (key) {
+      var info = getUserRDA(key);
+      micronutrients[key] = { target: info.rda, priority: !!priorityKeys[key] };
+    });
+
+    // Fiber target: the PRIMARY active goal's primaryTargets.fiberMin (same
+    // "first selected = primary" convention as getUserTDEE()'s calorie
+    // deficit), falling back to 25g (matches overall_wellness's own
+    // fiberMin, the default goal) if no goal profile data is available yet.
+    var primaryGoal = (state.goalProfiles || []).filter(function (g) { return g.id === activeGoalIds[0]; })[0];
+    var fiber = (primaryGoal && primaryGoal.primaryTargets && primaryGoal.primaryTargets.fiberMin != null)
+      ? primaryGoal.primaryTargets.fiberMin
+      : 25;
+
+    return {
+      calories: tdeeInfo ? tdeeInfo.targetCalories : null,
+      protein: tdeeInfo ? tdeeInfo.proteinTarget : null,
+      carbs: tdeeInfo ? tdeeInfo.carbTarget : null,
+      fat: tdeeInfo ? tdeeInfo.fatTarget : null,
+      fiber: fiber,
+      micronutrients: micronutrients
+    };
+  }
+
+  // getDailyMicronutrientTotals(dateString) vs getDailyTargets(): every
+  // nutrient under 90% complete, priority-first then lowest-percentComplete-
+  // first. displayName/unit are pulled from state.rdas[key] -- the exact
+  // same label map microRowHtml()/getMicronutrientStatus() already use, so
+  // Coach UI text matches the Micros tab's wording for the same nutrient.
+  function getMissingNutrients(dateString) {
+    var consumedTotals = getDailyMicronutrientTotals(dateString);
+    var targets = getDailyTargets();
+
+    var results = [];
+    MICRONUTRIENT_KEYS.forEach(function (key) {
+      var targetInfo = targets.micronutrients[key];
+      var target = targetInfo ? targetInfo.target : null;
+      if (target == null || target <= 0) return; // no established RDA -- nothing to be "missing" against
+      var consumed = consumedTotals[key] || 0;
+      var percentComplete = Math.min(100, Math.round((consumed / target) * 100));
+      if (percentComplete >= 90) return;
+
+      var meta = state.rdas[key];
+      results.push({
+        key: key,
+        displayName: meta ? meta.displayName : key,
+        consumed: consumed,
+        target: target,
+        remaining: Math.max(0, target - consumed),
+        percentComplete: percentComplete,
+        priority: targetInfo.priority,
+        unit: meta ? meta.unit : ""
+      });
+    });
+
+    results.sort(function (a, b) {
+      if (a.priority !== b.priority) return a.priority ? -1 : 1;
+      return a.percentComplete - b.percentComplete;
+    });
+
+    return results;
+  }
+
+  // Scores every food (preloaded + custom) and returns the top `limit`
+  // (default 5), deduped by id. Score = nutritionScore + 3 per top-3-missing-
+  // nutrient the food has real data for + 2 per matching preferFlag (union
+  // across active goals) - 3 per matching avoidFlag (union across active
+  // goals) - 1 per time already logged TODAY (always todayKey(), regardless
+  // of the dateString param -- "repeat" is about not re-suggesting something
+  // already in today's log, independent of which day's gaps are being
+  // scored against).
+  function getSuggestedFoods(dateString, limit) {
+    limit = limit || 5;
+    var missingKeys = getMissingNutrients(dateString).slice(0, 3).map(function (m) { return m.key; });
+
+    var activeGoalIds = getActiveGoals();
+    var activeGoalProfiles = (state.goalProfiles || []).filter(function (g) {
+      return activeGoalIds.indexOf(g.id) !== -1;
+    });
+    var preferFlags = {}, avoidFlags = {};
+    activeGoalProfiles.forEach(function (g) {
+      (g.preferFlags || []).forEach(function (f) { preferFlags[f] = true; });
+      (g.avoidFlags || []).forEach(function (f) { avoidFlags[f] = true; });
+    });
+
+    var loggedCounts = {};
+    (state.logEntries[todayKey()] || []).forEach(function (e) {
+      if (!e.foodId) return;
+      loggedCounts[e.foodId] = (loggedCounts[e.foodId] || 0) + 1;
+    });
+
+    var scored = allFoods().map(function (food) {
+      var score = Number(food.nutritionScore) || 0;
+      missingKeys.forEach(function (key) {
+        if (food[key] != null && Number(food[key]) > 0) score += 3;
+      });
+      (food.flags || []).forEach(function (flag) {
+        if (preferFlags[flag]) score += 2;
+        if (avoidFlags[flag]) score -= 3;
+      });
+      score -= (loggedCounts[food.id] || 0) * 1;
+      return { food: food, score: score };
+    });
+    scored.sort(function (a, b) { return b.score - a.score; });
+
+    var seen = {};
+    var out = [];
+    for (var i = 0; i < scored.length && out.length < limit; i++) {
+      var f = scored[i].food;
+      if (seen[f.id]) continue;
+      seen[f.id] = true;
+      out.push(f);
+    }
+    return out;
+  }
+
+  // Builds the ordered list of {name, emoji} meal-plan slots for a given
+  // suggestedMealStructure. meals===3 gets the named Breakfast/Lunch/Dinner
+  // set (covers 6 of goals.json's 7 profiles, all of which use meals:3);
+  // any other meal count (currently only muscle_gain, meals:4) gets generic
+  // "Meal N" slots instead, since there's no goals.json-provided name for a
+  // 4th+ meal. Snacks always follow meals, numbered only when there's more
+  // than one (muscle_gain has 2).
+  function buildMealSlots(structure) {
+    var meals = structure.meals || 3;
+    var snacks = structure.snacks || 1;
+    var slots = [];
+    var namedMeals = meals === 3 ? [
+      { name: "Breakfast", emoji: "🌅" },
+      { name: "Lunch", emoji: "☀️" },
+      { name: "Dinner", emoji: "🌙" }
+    ] : null;
+    for (var i = 0; i < meals; i++) {
+      slots.push(namedMeals ? namedMeals[i] : { name: "Meal " + (i + 1), emoji: "🍽️" });
+    }
+    for (var s = 0; s < snacks; s++) {
+      slots.push({ name: snacks > 1 ? "Snack " + (s + 1) : "Snack", emoji: "🍎" });
+    }
+    return slots;
+  }
+
+  // Builds a full day's meal plan. Meal/snack count + calorieDistribution
+  // come from the PRIMARY active goal's suggestedMealStructure ("first
+  // selected = primary" -- see getUserTDEE()'s comment; when multiple goals
+  // are active this is both "the first one" and "the most conservative one"
+  // in practice, since goals.json's structures only vary between the
+  // standard 3-meal/1-snack layout and muscle_gain's more elaborate
+  // 4-meal/2-snack layout -- picking "first selected" rather than always
+  // preferring the simpler structure keeps this one rule instead of two).
+  //
+  // Per slot: (1) a highProtein-flagged food sized to ~35% of the slot's
+  // calorie budget, scored by how many of today's top-3 missing nutrients it
+  // has real data for; (2) a fruit/vegetable item for micronutrient gaps,
+  // same scoring, skipped if it doesn't fit the remaining budget and the
+  // slot already has an item; (3) a grain/dairy/fat/snack "filler" sized to
+  // use up whatever calorie budget remains. No single food is used in more
+  // than 2 slots total across the whole plan (usageCounts, shared/mutated
+  // across all slots since Array.map runs its callback in index order).
+  function generateMealPlan(dateString) {
+    var targets = getDailyTargets();
+    var missing = getMissingNutrients(dateString);
+    var topMissingKeys = missing.slice(0, 3).map(function (m) { return m.key; });
+
+    var activeGoalIds = getActiveGoals();
+    var primaryGoal = (state.goalProfiles || []).filter(function (g) { return g.id === activeGoalIds[0]; })[0];
+    var structure = (primaryGoal && primaryGoal.suggestedMealStructure) ||
+      { meals: 3, snacks: 1, calorieDistribution: [0.30, 0.35, 0.25, 0.10] };
+
+    var slotDefs = buildMealSlots(structure);
+    var distribution = structure.calorieDistribution || [];
+    var targetCalories = targets.calories || 2000; // safety fallback: incomplete profile -> getDailyTargets().calories is null
+
+    var usageCounts = {};
+
+    function missingCoverageScore(food) {
+      var score = 0;
+      topMissingKeys.forEach(function (key) {
+        if (food[key] != null && Number(food[key]) > 0) score += 1;
+      });
+      return score * 10 + (Number(food.nutritionScore) || 0);
+    }
+
+    function pickFood(predicate, scoreFn) {
+      var candidates = allFoods().filter(function (f) {
+        return (usageCounts[f.id] || 0) < 2 && predicate(f);
+      });
+      candidates.sort(function (a, b) { return scoreFn(b) - scoreFn(a); });
+      return candidates[0] || null;
+    }
+
+    function itemFromFood(food, servings) {
+      usageCounts[food.id] = (usageCounts[food.id] || 0) + 1;
+      return {
+        foodId: food.id,
+        name: food.name,
+        servings: servings,
+        calories: food.calories * servings,
+        protein: food.protein_g * servings,
+        carbs: food.carbs_g * servings,
+        fat: food.fat_g * servings
+      };
+    }
+
+    var meals = slotDefs.map(function (slotDef, i) {
+      var slotBudget = Math.round(targetCalories * (distribution[i] != null ? distribution[i] : (1 / slotDefs.length)));
+      var items = [];
+      var remainingBudget = slotBudget;
+
+      var proteinFood = pickFood(function (f) { return (f.flags || []).indexOf("highProtein") !== -1; }, missingCoverageScore);
+      if (proteinFood && proteinFood.calories > 0) {
+        var proteinServings = Math.max(0.5, Math.round(((remainingBudget * 0.35) / proteinFood.calories) * 2) / 2);
+        var proteinItem = itemFromFood(proteinFood, proteinServings);
+        items.push(proteinItem);
+        remainingBudget -= proteinItem.calories;
+      }
+
+      var produceFood = pickFood(function (f) { return f.category === "fruit" || f.category === "vegetable"; }, missingCoverageScore);
+      if (produceFood) {
+        var produceItem = itemFromFood(produceFood, 1);
+        if (produceItem.calories <= remainingBudget || items.length === 0) {
+          items.push(produceItem);
+          remainingBudget -= produceItem.calories;
+        } else {
+          usageCounts[produceFood.id] -= 1; // didn't fit and wasn't the only item -- release the usage slot
+        }
+      }
+
+      if (remainingBudget > 30) {
+        var fillerFood = pickFood(
+          function (f) { return ["grain", "dairy", "fat", "snack"].indexOf(f.category) !== -1; },
+          function (f) { return -Math.abs(f.calories - remainingBudget); }
+        );
+        if (fillerFood && fillerFood.calories > 0) {
+          var fillerServings = Math.max(0.5, Math.round((remainingBudget / fillerFood.calories) * 2) / 2);
+          var fillerItem = itemFromFood(fillerFood, fillerServings);
+          items.push(fillerItem);
+          remainingBudget -= fillerItem.calories;
+        }
+      }
+
+      var mealTotals = items.reduce(function (acc, it) {
+        acc.calories += it.calories; acc.protein += it.protein; acc.carbs += it.carbs; acc.fat += it.fat;
+        return acc;
+      }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
+
+      return { slot: slotDef.name, emoji: slotDef.emoji, targetCalories: slotBudget, items: items, mealTotals: mealTotals };
+    });
+
+    var planTotals = meals.reduce(function (acc, m) {
+      acc.calories += m.mealTotals.calories;
+      acc.protein += m.mealTotals.protein;
+      acc.carbs += m.mealTotals.carbs;
+      acc.fat += m.mealTotals.fat;
+      return acc;
+    }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
+
+    var plannedFoodIds = {};
+    meals.forEach(function (m) { m.items.forEach(function (it) { plannedFoodIds[it.foodId] = true; }); });
+    var nutrientsCovered = [];
+    var nutrientsStillShort = [];
+    missing.forEach(function (m) {
+      var covered = Object.keys(plannedFoodIds).some(function (id) {
+        var f = allFoods().filter(function (x) { return x.id === id; })[0];
+        return f && f[m.key] != null && Number(f[m.key]) > 0;
+      });
+      (covered ? nutrientsCovered : nutrientsStillShort).push(m.key);
+    });
+
+    return {
+      generatedAt: new Date().toISOString(),
+      targetCalories: targetCalories,
+      meals: meals,
+      planTotals: planTotals,
+      nutrientsCovered: nutrientsCovered,
+      nutrientsStillShort: nutrientsStillShort
+    };
+  }
+
+  // True iff state.logEntries has a non-empty entry for each of the last 7
+  // consecutive calendar days INCLUDING today (today counts as day 0 of the
+  // streak). Uses Date.setDate() (not keyFromParts() arithmetic on the raw
+  // day number) so month/year boundaries roll over correctly. Empty-array
+  // date keys don't actually occur in state.logEntries -- removeLogEntry()
+  // deletes the key entirely once its array is empty -- but this checks
+  // .length > 0 anyway rather than relying on that invariant.
+  function hasSevenDayStreak() {
+    for (var i = 0; i < 7; i++) {
+      var d = new Date();
+      d.setDate(d.getDate() - i);
+      var key = keyFromParts(d.getFullYear(), d.getMonth(), d.getDate());
+      var entries = state.logEntries[key];
+      if (!entries || entries.length === 0) return false;
+    }
+    return true;
+  }
+
+  // Up to 3 insights, evaluated in the brief's exact 5-condition order below,
+  // then re-sorted warning > milestone > suggestion > encouragement and
+  // sliced to 3 if more than 3 candidates fired at once.
+  function getCoachingInsights(dateString) {
+    var now = new Date();
+    var hour = now.getHours();
+    var totals = computeTotals(state.logEntries[dateString] || []);
+    var targets = getDailyTargets();
+    var candidates = [];
+
+    if (targets.calories && totals.calories > targets.calories * 0.9 && hour < 18) {
+      candidates.push({
+        type: "warning",
+        message: "You've used 90% of today's calories — plan a light dinner to stay on track",
+        emoji: "⚠️",
+        actionable: true,
+        relatedNutrient: "calories"
+      });
+    }
+
+    if (hour >= 19) {
+      var criticalPriority = getMissingNutrients(dateString).filter(function (m) {
+        return m.priority && m.percentComplete < 25;
+      })[0];
+      if (criticalPriority) {
+        var topSuggestion = getSuggestedFoods(dateString, 1)[0];
+        var topFoodName = topSuggestion ? topSuggestion.name : "a nutrient-dense food";
+        candidates.push({
+          type: "warning",
+          message: "You're low on " + criticalPriority.displayName + " today — try " + topFoodName + " to help close the gap",
+          emoji: "⚠️",
+          actionable: true,
+          relatedNutrient: criticalPriority.key
+        });
+      }
+    }
+
+    if (hasSevenDayStreak()) {
+      candidates.push({
+        type: "milestone",
+        message: "7-day streak — consistency is everything",
+        emoji: "🔥",
+        actionable: false,
+        relatedNutrient: null
+      });
+    }
+
+    if (targets.protein && totals.protein_g < targets.protein * 0.5 && hour < 14) {
+      candidates.push({
+        type: "suggestion",
+        message: "Lunch is a great time to catch up on protein",
+        emoji: "💡",
+        actionable: true,
+        relatedNutrient: "protein_g"
+      });
+    }
+
+    if (getActiveGoals().indexOf("weight_loss") !== -1 && targets.calories != null) {
+      var underBy = targets.calories - totals.calories;
+      if (underBy > 800) {
+        var tdeeInfo = getUserTDEE();
+        var floor = Math.round((tdeeInfo ? tdeeInfo.tdee : targets.calories) - 700);
+        candidates.push({
+          type: "warning",
+          message: "Eating too little can slow your metabolism — try to hit at least " + floor + " today",
+          emoji: "⚠️",
+          actionable: true,
+          relatedNutrient: "calories"
+        });
+      }
+    }
+
+    var typeRank = { warning: 0, milestone: 1, suggestion: 2, encouragement: 3 };
+    candidates.sort(function (a, b) { return (typeRank[a.type] || 9) - (typeRank[b.type] || 9); });
+    return candidates.slice(0, 3);
+  }
+
+  // True iff ANY entry (food or supplement) on ANY logged date so far has
+  // real data for micronutrient key `key`. Used by getOnboardingQuestions()'s
+  // hair_and_skin/biotin condition -- "ever logged", not "today", since the
+  // question is about whether the user's overall diet includes a biotin
+  // source at all.
+  function hasEverLoggedNutrient(key) {
+    return Object.keys(state.logEntries).some(function (dateKey) {
+      return state.logEntries[dateKey].some(function (e) { return e[key] != null; });
+    });
+  }
+
+  // The `limit` foodIds logged most often across ALL of state.logEntries
+  // (food entries only -- e.type no "type" field, matching the
+  // food-vs-supplement convention used throughout this file), each resolved
+  // to its real food object via allFoods(). Foods no longer resolvable
+  // (e.g. a since-deleted custom food) are dropped rather than returned with
+  // food: undefined.
+  function getMostLoggedFoods(limit) {
+    var counts = {};
+    Object.keys(state.logEntries).forEach(function (dateKey) {
+      state.logEntries[dateKey].forEach(function (e) {
+        if (e.type === "supplement" || !e.foodId) return;
+        counts[e.foodId] = (counts[e.foodId] || 0) + 1;
+      });
+    });
+    return Object.keys(counts)
+      .map(function (id) {
+        return { id: id, count: counts[id], food: allFoods().filter(function (f) { return f.id === id; })[0] };
+      })
+      .filter(function (x) { return !!x.food; })
+      .sort(function (a, b) { return b.count - a.count; })
+      .slice(0, limit);
+  }
+
+  // 5 conditional onboarding/data-quality questions. Object shape is fixed
+  // across all 5: { id, question, type, why, action }.
+  function getOnboardingQuestions() {
+    var questions = [];
+    var p = state.profile || {};
+
+    if (p.weight == null) {
+      questions.push({
+        id: "missing_weight",
+        question: "What's your current weight?",
+        type: "profile",
+        why: "Weight drives your calorie and protein targets (Mifflin-St Jeor plus your goal's protein multiplier) -- without it, Coach can't calculate a personalized target.",
+        action: "Open Settings › Profile and enter your weight."
+      });
+    }
+
+    if (!p.activityLevel) {
+      questions.push({
+        id: "missing_activity_level",
+        question: "How active are you day-to-day?",
+        type: "profile",
+        why: "Activity level is the multiplier applied to your BMR to estimate total daily energy expenditure -- the biggest lever on your calorie target after bodyweight.",
+        action: "Open Settings › Profile and choose an activity level."
+      });
+    }
+
+    if (getActiveGoals().indexOf("hair_and_skin") !== -1 && !hasEverLoggedNutrient("biotin_mcg")) {
+      questions.push({
+        id: "no_biotin_source_logged",
+        question: "Have you been eating any biotin-rich foods (eggs, salmon, nuts, seeds)?",
+        type: "goal_data",
+        why: "Hair & Skin Health prioritizes biotin, but nothing you've logged so far has any biotin data, so Coach can't tell if you're on track for it.",
+        action: "Log a biotin-rich food, or add biotin data to a custom food you eat often."
+      });
+    }
+
+    // SIMPLIFICATION (documented in the log-engine report): this app has no
+    // weigh-in-history concept and state.profile has no last-updated
+    // timestamp at all (defaultProfile()'s only fields are weight/
+    // weightUnit/height/heightUnit/age/sex/activityLevel/goalType/onboarded)
+    // -- so "no weigh-in in the past 7 days" literally can't be measured
+    // without inventing a new profile field, which was explicitly out of
+    // bounds. Simplified to: weight_loss is active and a weight is on file
+    // -- a standing "keep this current" nudge rather than a true recency
+    // check.
+    if (getActiveGoals().indexOf("weight_loss") !== -1 && p.weight != null) {
+      questions.push({
+        id: "weight_loss_confirm_weight",
+        question: "Is your current weight still " + p.weight + " " + (p.weightUnit || "lb") + "?",
+        type: "goal_data",
+        why: "Weight Loss targets are calculated from your bodyweight -- a stale number means a stale calorie and protein target.",
+        action: "Confirm or update your weight in Settings › Profile."
+      });
+    }
+
+    var poorlyTracked = getMostLoggedFoods(5).filter(function (x) {
+      var missingCount = MICRONUTRIENT_KEYS.filter(function (k) { return x.food[k] == null; }).length;
+      return missingCount >= 3;
+    });
+    if (poorlyTracked.length > 0) {
+      questions.push({
+        id: "sparse_micronutrient_data",
+        question: "Some of your regular foods are missing detailed nutrient data (" +
+          poorlyTracked.map(function (x) { return x.food.name; }).join(", ") + ") — want to fill them in?",
+        type: "data_quality",
+        why: "These are among your most-logged foods, but each is missing 3 or more of the 30 tracked micronutrients, which understates your real intake in Coach's targets.",
+        action: "Edit these custom foods (or log the branded/verified version) to add the missing micronutrient values."
+      });
+    }
+
+    return questions;
+  }
+
+  // Static reference list -- 5 free/low-cost sources a user can consult to
+  // fill in nutrient data this app itself doesn't have (e.g. answering
+  // getOnboardingQuestions()'s sparse_micronutrient_data question).
+  function getFreeFoodDataSources() {
+    return [
+      {
+        name: "USDA FoodData Central",
+        url: "https://fdc.nal.usda.gov/",
+        description: "The U.S. government's free, public nutrient database -- the most complete and authoritative source for raw and whole foods, covering all 30+ micronutrients this app tracks.",
+        bestFor: "Whole foods, raw ingredients, and generic/branded items with lab-verified nutrient panels.",
+        howToUse: "Search by food name, open a result, and copy values from its \"Full Report\" nutrient list into a custom food here."
+      },
+      {
+        name: "Cronometer",
+        url: "https://cronometer.com/",
+        description: "A nutrition tracker built on the same USDA-grade data this app cares about, with a free tier that shows a full micronutrient breakdown per food.",
+        bestFor: "Cross-checking a food's full micronutrient profile (not just the 7 core macros) before adding it as a custom food.",
+        howToUse: "Search the food in Cronometer's free food database and read off the micronutrient amounts for your serving size."
+      },
+      {
+        name: "Open Food Facts",
+        url: "https://world.openfoodfacts.org/",
+        description: "A free, crowdsourced, open database of packaged and branded products worldwide, keyed by barcode -- the same database this app's built-in barcode scanner already queries.",
+        bestFor: "Packaged and branded grocery items, especially ones with a barcode.",
+        howToUse: "Use the in-app barcode scanner, or look the product up directly on openfoodfacts.org, and use its per-100g nutrient panel."
+      },
+      {
+        name: "Nutritionix",
+        url: "https://www.nutritionix.com/",
+        description: "A large, free-to-browse food and restaurant database, particularly strong for restaurant and fast-food items that USDA and Open Food Facts often don't cover.",
+        bestFor: "Restaurant meals and fast food, where a close match matters more than an exact lab panel.",
+        howToUse: "Search the item on nutritionix.com and copy its calorie, macro, and (where listed) micronutrient values into a custom food."
+      },
+      {
+        name: "Examine.com",
+        url: "https://examine.com/",
+        description: "An independent, research-backed reference on nutrients and supplements -- not a food database, but the best free source for understanding what a nutrient actually does and why a goal profile prioritizes it.",
+        bestFor: "Understanding why a nutrient matters for a specific goal (e.g. why Hair & Skin Health prioritizes biotin and zinc), not looking up food values.",
+        howToUse: "Search a nutrient name to read its evidence-based summary when a Coach insight or priority nutrient is unfamiliar."
+      }
+    ];
+  }
+
   // ---------- rendering ----------
   function fmt(n) {
     n = Number(n) || 0;
@@ -2388,7 +3156,12 @@
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   }
 
-  function addLogEntry(food, multiplier) {
+  // opts is optional (every existing call site omits it -- behavior for
+  // those is byte-for-byte unchanged). opts.silent: true skips the render/
+  // toast calls at the end (entry is still pushed + saved) -- used by
+  // logMealPlanItems() below to log several items at once and render/toast
+  // exactly once for the whole batch instead of once per item.
+  function addLogEntry(food, multiplier, opts) {
     var key = todayKey();
     if (!state.logEntries[key]) state.logEntries[key] = [];
     var entry = { id: uid(), foodId: food.id, name: food.name, brand: food.brand || "", servingSize: food.servingSize, servingUnit: food.servingUnit, multiplier: multiplier };
@@ -2400,6 +3173,7 @@
     MICRONUTRIENT_KEYS.forEach(function (k) { if (food[k] != null) entry[k] = Number(food[k]); });
     state.logEntries[key].push(entry);
     saveLogEntries();
+    if (opts && opts.silent) return;
     renderTotals();
     renderLogList();
     renderCalendar();
@@ -2408,6 +3182,30 @@
     renderMicroView();
     showToast("Logged " + food.name);
     maybeWarnUpperLimit();
+  }
+
+  // Logs every item from one generateMealPlan() meal slot in one batch
+  // (opts:{silent:true} on each addLogEntry() call so nothing re-renders
+  // mid-loop), then renders/warns/toasts exactly ONCE for the whole meal --
+  // mirrors addLogEntry()'s own render sequence and maybeWarnUpperLimit()
+  // call, just deferred to after the loop instead of after every item.
+  // mealItems: array of {foodId, servings, ...} (a generateMealPlan() meal's
+  // .items array works directly). Items whose foodId no longer resolves to
+  // a real food (e.g. a deleted custom food) are silently skipped.
+  function logMealPlanItems(mealItems, mealEmoji, mealSlotName) {
+    (mealItems || []).forEach(function (item) {
+      var food = allFoods().filter(function (f) { return f.id === item.foodId; })[0];
+      if (!food) return;
+      addLogEntry(food, item.servings, { silent: true });
+    });
+    renderTotals();
+    renderLogList();
+    renderCalendar();
+    renderRecentDays();
+    renderMicroSummary();
+    renderMicroView();
+    maybeWarnUpperLimit();
+    showToast((mealEmoji || "🍽️") + " " + (mealSlotName || "Meal") + " logged — " + (mealItems ? mealItems.length : 0) + " items added");
   }
 
   function removeLogEntry(dateKey, id) {
@@ -2833,6 +3631,8 @@
   function showOnboarding() {
     document.getElementById("onboardingFormMount").innerHTML = profileFormFieldsHtml("ob");
     fillProfileForm("ob", state.profile);
+    renderHealthGoalCards("onboardingHealthGoalsMount");
+    renderCoachOnboardingQuestions("onboardingQuestionsMount");
     onboardingBackdrop.classList.add("open");
   }
   function hideOnboarding() {
@@ -2844,7 +3644,15 @@
     completeOnboarding(values);
     hideOnboarding();
     renderAll();
-    showToast("Profile saved");
+    // Health-goal selection is already persisted to STORAGE_HEALTH_GOALS the
+    // moment each goal card is tapped (see toggleHealthGoal()) -- nothing
+    // further to save here. getOnboardingQuestions() questions are advisory
+    // nudges (their `type` field is a category -- "profile"/"goal_data"/
+    // "data_quality" -- not an input-widget type), not literal form fields
+    // with a value to collect, so there is nothing to merge into the profile
+    // save path either; see renderCoachOnboardingQuestions()'s comment.
+    showToast("Goals saved — your coach is personalizing your targets");
+    switchView("coachView");
   });
   document.getElementById("onboardingSkipBtn").addEventListener("click", function () {
     // Deliberately does not call completeOnboarding() -- state.profile.onboarded
@@ -2903,12 +3711,18 @@
   function openSettings() {
     document.getElementById("settingsProfileFormMount").innerHTML = profileFormFieldsHtml("set");
     fillProfileForm("set", state.profile);
+    renderHealthGoalCards("settingsHealthGoalsMount");
     renderDisplayPrefsSettings();
     renderGoalOverridesSettings();
     settingsBackdrop.classList.add("open");
   }
   function closeSettings() {
     settingsBackdrop.classList.remove("open");
+    // Profile/goal edits made in this settings session (weight, activity
+    // level, health-goal selection) can all change what the Coach view
+    // shows -- refresh it now if it's the visible tab, same as
+    // switchView("coachView")'s own refresh-on-open hook.
+    if (document.getElementById("coachView").style.display !== "none") renderCoachView();
   }
   document.getElementById("settingsBtn").addEventListener("click", openSettings);
   document.getElementById("settingsCloseBtn").addEventListener("click", closeSettings);
@@ -3466,6 +4280,440 @@
   document.getElementById("searchInput").addEventListener("input", renderFoodList);
   document.getElementById("supplementSearchInput").addEventListener("input", renderSupplementList);
 
+  // ---------- Nutrition Coach view ----------
+  // UI layer only -- every number/list here comes from the 10 log-engine
+  // functions documented near "---------- Nutrition Coach ----------" above
+  // (getActiveGoals/getUserTDEE/getDailyTargets/getMissingNutrients/
+  // getSuggestedFoods/generateMealPlan/getCoachingInsights/
+  // getOnboardingQuestions/getFreeFoodDataSources/logMealPlanItems). Nothing
+  // below re-derives targets, scores, or streaks that those functions already
+  // compute -- see renderCoachHeaderContent()'s computeCurrentStreak() for
+  // the one exception (a numeric streak COUNT), which hasSevenDayStreak()
+  // (log-engine, above) doesn't provide -- it only returns a 7-day boolean.
+
+  // ---- goal picker (shared by onboarding + settings) ----
+  // Source of truth for both rendering and toggling is getActiveGoals()
+  // itself (not a raw localStorage read) so this stays in lockstep with
+  // every other Coach function's notion of "active goals" -- including its
+  // fallback-to-["overall_wellness"] behavior when nothing has been
+  // explicitly chosen yet. One consequence of reusing that fallback: the
+  // "Overall Wellness" card renders pre-selected for a brand-new user, and
+  // tapping it to "deselect" just writes [] back to storage, which
+  // getActiveGoals() immediately re-defaults to ["overall_wellness"] again --
+  // i.e. Overall Wellness can be replaced by picking something else, but not
+  // turned off into a truly empty selection. That matches goals.json's own
+  // description of overall_wellness as "the default goal, used when a user
+  // hasn't selected a specific focus" -- there is no meaningful "no goal at
+  // all" state to represent.
+  function renderHealthGoalCards(containerId) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    var profiles = state.goalProfiles || [];
+    if (profiles.length === 0) {
+      container.innerHTML = '<div class="empty">Loading goals…</div>';
+      return;
+    }
+    var active = getActiveGoals();
+    container.innerHTML = '<div class="goal-grid">' + profiles.map(function (g) {
+      var isSel = active.indexOf(g.id) !== -1;
+      return (
+        '<button type="button" class="goal-card' + (isSel ? ' selected' : '') + '" data-goal-id="' + escapeHtml(g.id) + '">' +
+          (isSel ? '<span class="goal-card-check">✓</span>' : '') +
+          '<div class="goal-card-emoji">' + g.emoji + '</div>' +
+          '<div class="goal-card-label">' + escapeHtml(g.label) + '</div>' +
+          '<div class="goal-card-tagline">' + escapeHtml(g.tagline) + '</div>' +
+        '</button>'
+      );
+    }).join("") + '</div>';
+    container.querySelectorAll(".goal-card").forEach(function (btn) {
+      btn.addEventListener("click", function () { toggleHealthGoal(btn.getAttribute("data-goal-id")); });
+    });
+  }
+
+  // Persists immediately on every tap (max 3 -- a 4th tap is ignored with a
+  // toast rather than silently bumping the oldest selection off, so the user
+  // always knows exactly what's selected). This matches
+  // renderGoalOverridesSettings()'s own save-on-change convention, and
+  // trivially satisfies onboarding's "must be saved by the time Get started
+  // is tapped" requirement since it's already saved well before that.
+  // Re-renders whichever of the two mount points currently exist in the DOM
+  // (both are always present as empty containers even before their first
+  // render) plus the Coach view's own header/goal-reminder line if visible.
+  function toggleHealthGoal(id) {
+    var active = getActiveGoals().slice();
+    var idx = active.indexOf(id);
+    if (idx !== -1) {
+      active.splice(idx, 1);
+    } else {
+      if (active.length >= 3) { showToast("Up to 3 goals"); return; }
+      active.push(id);
+    }
+    localStorage.setItem(STORAGE_HEALTH_GOALS, JSON.stringify(active));
+    renderHealthGoalCards("onboardingHealthGoalsMount");
+    renderHealthGoalCards("settingsHealthGoalsMount");
+    renderCoachOnboardingQuestions("onboardingQuestionsMount"); // goal changes can add/remove goal_data questions (e.g. hair_and_skin's biotin question)
+    if (document.getElementById("coachView").style.display !== "none") renderCoachView();
+  }
+
+  // ---- onboarding questions (onboarding context only) ----
+  // getOnboardingQuestions() returns { id, question, type, why, action } --
+  // NOTE: `type` here is a QUESTION CATEGORY ("profile" | "goal_data" |
+  // "data_quality"), not an input-widget type ("number"/"select"/"yesno"/
+  // "info") the way the brief described it. There's no answer-value schema
+  // attached to these objects to collect into a form control, so each is
+  // rendered as an advisory card (question + actionable guidance text, e.g.
+  // "Open Settings > Profile and enter your weight") with a "Why are we
+  // asking?" expand/collapse for the `why` field, reusing the existing
+  // .micro-contributors <details> pattern -- not as a data-entry widget.
+  // "missing_weight"/"missing_activity_level" questions can appear even
+  // though those exact fields are being collected by the profile form right
+  // above this section in onboarding -- getOnboardingQuestions() reads
+  // state.profile (not the live, unsaved form inputs), so the question is
+  // simply reinforcing why those specific fields above matter until the form
+  // is actually submitted.
+  function renderCoachOnboardingQuestions(containerId) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    var questions = getOnboardingQuestions();
+    if (questions.length === 0) { container.innerHTML = ""; return; }
+    container.innerHTML =
+      '<div class="micro-fields-label" style="margin-top:14px; margin-bottom:6px;">A few quick checks</div>' +
+      questions.map(function (q) {
+        return (
+          '<div class="coach-question-card">' +
+            '<div style="font-size:13.5px; font-weight:600;">' + escapeHtml(q.question) + '</div>' +
+            (q.action ? '<div class="food-meta" style="margin-top:4px;">' + escapeHtml(q.action) + '</div>' : '') +
+            (q.why ? (
+              '<details class="micro-contributors">' +
+                '<summary class="micro-contributors-toggle"><span>Why are we asking?</span><span class="chevron">▾</span></summary>' +
+                '<div class="micro-contributors-list"><div style="font-size:11.5px; color:var(--text-secondary);">' + escapeHtml(q.why) + '</div></div>' +
+              '</details>'
+            ) : '') +
+          '</div>'
+        );
+      }).join("");
+  }
+
+  // ---- header card ----
+  function greetingForHour(hour) {
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  }
+
+  // A numeric consecutive-day-streak COUNT (today inclusive, breaks on the
+  // first gap). Adapted from hasSevenDayStreak()'s exact loop technique
+  // (Date.setDate() rollover, same keyFromParts() lookup) above -- that
+  // function only answers a yes/no "is there a full 7-day streak", which
+  // isn't what a "day-streak count" summary number needs, so this reuses its
+  // method rather than its return shape. 3650 (10 years) is just a sane
+  // upper bound so a pathological all-days-logged history can't loop forever.
+  function computeCurrentStreak() {
+    var streak = 0;
+    for (var i = 0; i < 3650; i++) {
+      var d = new Date();
+      d.setDate(d.getDate() - i);
+      var key = keyFromParts(d.getFullYear(), d.getMonth(), d.getDate());
+      var entries = state.logEntries[key];
+      if (!entries || entries.length === 0) break;
+      streak++;
+    }
+    return streak;
+  }
+
+  function renderCoachHeaderContent() {
+    var container = document.getElementById("coachHeaderContent");
+    if (!container) return;
+    var now = new Date();
+    var dateLabel = now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+    var greeting = greetingForHour(now.getHours());
+
+    var activeIds = getActiveGoals();
+    var profiles = state.goalProfiles || [];
+    var activeLabel = activeIds.map(function (id) {
+      var g = profiles.filter(function (x) { return x.id === id; })[0];
+      return g ? (g.emoji + " " + escapeHtml(g.label)) : null;
+    }).filter(Boolean).join(" · ");
+
+    var tdeeInfo = getUserTDEE();
+    if (!tdeeInfo) {
+      container.innerHTML =
+        '<h2 style="margin:0 0 2px;">' + greeting + '</h2>' +
+        '<p class="food-meta" style="margin:0 0 12px;">' + dateLabel + '</p>' +
+        '<div class="empty" style="padding:6px 0 12px;">Complete your profile to unlock personalized coaching targets.</div>' +
+        '<button class="secondary" id="coachCompleteProfileBtn" type="button">Complete Profile</button>';
+      document.getElementById("coachCompleteProfileBtn").addEventListener("click", openSettings);
+      return;
+    }
+
+    var targets = getDailyTargets();
+    var totals = computeTotals(state.logEntries[todayKey()] || []);
+    var calRemaining = Math.max(0, Math.round((targets.calories || 0) - totals.calories));
+    var proteinRemaining = Math.max(0, Math.round((targets.protein || 0) - totals.protein_g));
+    var streak = computeCurrentStreak();
+
+    container.innerHTML =
+      '<h2 style="margin:0 0 2px;">' + greeting + '</h2>' +
+      '<p class="food-meta" style="margin:0 0 6px;">' + dateLabel + '</p>' +
+      (activeLabel ? '<p class="food-meta" style="margin:0 0 12px;">' + activeLabel + '</p>' : '') +
+      '<div class="totals-grid">' +
+        '<div class="stat"><div class="value">' + calRemaining + '</div><div class="label">kcal left</div></div>' +
+        '<div class="stat"><div class="value">' + proteinRemaining + 'g</div><div class="label">protein left</div></div>' +
+        '<div class="stat"><div class="value">' + streak + '</div><div class="label">day streak 🔥</div></div>' +
+      '</div>';
+  }
+
+  // ---- weekly check-in (weight_loss goal only) ----
+  function renderCoachCheckin() {
+    var card = document.getElementById("coachCheckinCard");
+    if (!card) return;
+    var isWeightLoss = getActiveGoals().indexOf("weight_loss") !== -1;
+    card.style.display = isWeightLoss ? "" : "none";
+    if (!isWeightLoss) return;
+    var unit = (state.profile && state.profile.weightUnit) || "lb";
+    document.getElementById("coachCheckinWeight").value =
+      state.profile && state.profile.weight != null ? state.profile.weight : "";
+    document.getElementById("coachCheckinUnitLabel").textContent = unit;
+  }
+  document.getElementById("coachCheckinSaveBtn").addEventListener("click", function () {
+    var val = Number(document.getElementById("coachCheckinWeight").value);
+    if (!(val > 0)) { showToast("Enter a valid weight"); return; }
+    state.profile = state.profile || defaultProfile();
+    state.profile.weight = val;
+    saveProfile();
+    var tdeeInfo = getUserTDEE();
+    var newTarget = tdeeInfo ? tdeeInfo.targetCalories : null;
+    showToast("Target updated — new daily goal: " + (newTarget != null ? newTarget : "—") + " calories");
+    renderCoachView();
+  });
+
+  // ---- "Complete Your Nutrients" ----
+  function renderCoachMissingNutrients() {
+    var container = document.getElementById("coachMissingNutrients");
+    if (!container) return;
+    var missing = getMissingNutrients(todayKey()).slice(0, 5);
+    if (missing.length === 0) {
+      container.innerHTML =
+        '<div class="warning-banner" style="background:var(--accent-light); color:var(--accent); border-color:var(--accent);">' +
+          '🎉 Great job — you\'re covering all your key nutrients today!' +
+        '</div>';
+      return;
+    }
+    // Shared top-suggestions pool (getSuggestedFoods() -- log-engine's own
+    // scoring, not re-implemented here), then per-row filtered down to foods
+    // that actually carry real data for THAT row's specific nutrient key
+    // where practical, falling back to the shared pool's own top picks when
+    // none of them happen to carry that key.
+    var pool = getSuggestedFoods(todayKey(), 8);
+    container.innerHTML = missing.map(function (m) {
+      var pct = Math.min(100, m.percentComplete);
+      var barColor = pct < 25 ? "var(--danger)" : (pct < 75 ? "#FFC107" : "#74C69D");
+      var forThis = pool.filter(function (f) { return f[m.key] != null && Number(f[m.key]) > 0; }).slice(0, 3);
+      if (forThis.length === 0) forThis = pool.slice(0, 2);
+      var foodsHtml = forThis.map(function (f) {
+        var brandPrefix = f.brand ? escapeHtml(f.brand) + ' · ' : '';
+        return (
+          '<button type="button" class="food-row coach-suggestion-row" data-food-id="' + escapeHtml(f.id) + '">' +
+            '<span>' +
+              '<span class="food-name">' + escapeHtml(f.name) + '</span>' +
+              '<div class="food-meta">' + brandPrefix + fmt(f.servingSize) + ' ' + escapeHtml(f.servingUnit) + '</div>' +
+            '</span>' +
+            '<span class="food-cal">' + fmt(f.calories) + ' kcal</span>' +
+          '</button>'
+        );
+      }).join("");
+      return (
+        '<div class="micro-row">' +
+          '<div class="micro-row-top">' +
+            '<span class="micro-name">' + (m.priority ? '⭐ ' : '') + escapeHtml(m.displayName) + '</span>' +
+            '<span class="micro-amount">' + fmt(m.consumed) + ' / ' + fmt(m.target) + ' ' + escapeHtml(m.unit) + '</span>' +
+          '</div>' +
+          '<div class="stat-bar-track"><div class="stat-bar-fill" style="width:' + pct + '%; background:' + barColor + ';"></div></div>' +
+          '<div class="food-list" style="max-height:none; margin-top:8px; gap:6px;">' + (foodsHtml || '<div class="empty">No suggestions available.</div>') + '</div>' +
+        '</div>'
+      );
+    }).join("");
+    container.querySelectorAll(".coach-suggestion-row").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var food = allFoods().filter(function (f) { return f.id === btn.getAttribute("data-food-id"); })[0];
+        if (food) openLogModal(food); // same log-food modal used from the Log tab's food list -- not a second modal
+      });
+    });
+  }
+
+  // ---- "Today's Coaching" ----
+  // Left-border colors: warning=danger (red), milestone=the same amber
+  // already used for the "low" micronutrient bucket (#FFC107, see
+  // MICRO_STATUS_COLORS above), encouragement=accent (green), suggestion=
+  // --nutrient-sodium (teal) as a 4th, visually distinct existing color not
+  // already claimed by the other three types.
+  var COACH_INSIGHT_BORDER_COLORS = {
+    warning: "var(--danger)",
+    milestone: "#FFC107",
+    encouragement: "var(--accent)",
+    suggestion: "var(--nutrient-sodium)"
+  };
+  function renderCoachInsights() {
+    var container = document.getElementById("coachInsights");
+    if (!container) return;
+    var insights = getCoachingInsights(todayKey());
+    if (insights.length === 0) {
+      container.innerHTML = '<div class="empty">No coaching notes right now — check back later today.</div>';
+      return;
+    }
+    container.innerHTML = insights.map(function (ins) {
+      var color = COACH_INSIGHT_BORDER_COLORS[ins.type] || "var(--border)";
+      return (
+        '<div class="coach-insight-card" style="border-left-color:' + color + ';">' +
+          ins.emoji + ' ' + escapeHtml(ins.message) +
+        '</div>'
+      );
+    }).join("");
+  }
+
+  // ---- "Suggested Meal Plan" ----
+  var coachCurrentMealPlan = null;
+
+  function renderMealPlanResult(plan) {
+    var container = document.getElementById("coachMealPlanResult");
+    if (!container) return;
+    if (!plan) { container.innerHTML = ""; return; }
+
+    var mealsHtml = plan.meals.map(function (meal, idx) {
+      var itemsHtml = meal.items.map(function (it) {
+        return (
+          '<div class="log-entry">' +
+            '<div class="log-entry-info">' +
+              '<div class="log-entry-name">' + escapeHtml(it.name) + '</div>' +
+              '<div class="log-entry-meta">' + fmt(it.servings) + ' serving' + (it.servings === 1 ? '' : 's') +
+                ' · ' + fmt(it.calories) + ' kcal · ' + fmt(it.protein) + 'g protein</div>' +
+            '</div>' +
+          '</div>'
+        );
+      }).join("");
+      return (
+        '<div class="card" style="margin-bottom:10px;">' +
+          '<h2 style="margin-bottom:6px;">' + meal.emoji + ' ' + escapeHtml(meal.slot) + '</h2>' +
+          (itemsHtml || '<div class="empty">No items generated for this meal.</div>') +
+          '<p class="food-meta" style="margin:8px 0 10px;">Meal total: ' + fmt(meal.mealTotals.calories) + ' kcal · ' + fmt(meal.mealTotals.protein) + 'g protein</p>' +
+          '<button class="secondary coach-log-meal-btn" type="button" data-meal-idx="' + idx + '">Log This Meal</button>' +
+        '</div>'
+      );
+    }).join("");
+
+    function keysToNames(keys) {
+      var names = keys.map(function (k) { var m = state.rdas[k]; return m ? m.displayName : k; });
+      return names.length ? names.join(", ") : "None";
+    }
+
+    container.innerHTML =
+      mealsHtml +
+      '<div class="card">' +
+        '<p class="food-meta">Plan total: ' + fmt(plan.planTotals.calories) + ' kcal · ' + fmt(plan.planTotals.protein) + 'g protein · ' +
+          fmt(plan.planTotals.carbs) + 'g carbs · ' + fmt(plan.planTotals.fat) + 'g fat</p>' +
+        '<p class="food-meta" style="margin-top:6px;"><strong>Covered:</strong> ' + escapeHtml(keysToNames(plan.nutrientsCovered)) + '</p>' +
+        '<p class="food-meta" style="margin-top:4px;"><strong>Still short:</strong> ' + escapeHtml(keysToNames(plan.nutrientsStillShort)) + '</p>' +
+        '<div class="modal-actions" style="margin-top:10px;">' +
+          '<button class="secondary" id="coachRegeneratePlanBtn" type="button">Regenerate Plan</button>' +
+          '<button class="primary" id="coachSavePlanBtn" type="button">Save This Plan</button>' +
+        '</div>' +
+      '</div>';
+
+    container.querySelectorAll(".coach-log-meal-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var meal = plan.meals[Number(btn.getAttribute("data-meal-idx"))];
+        if (!meal) return;
+        logMealPlanItems(meal.items, meal.emoji, meal.slot); // bulk-logs + toasts + re-renders totals/log/etc itself
+        renderCoachHeaderContent();
+        renderCoachMissingNutrients();
+        renderCoachInsights();
+      });
+    });
+    document.getElementById("coachRegeneratePlanBtn").addEventListener("click", function () {
+      coachCurrentMealPlan = generateMealPlan(todayKey());
+      renderMealPlanResult(coachCurrentMealPlan);
+      showToast("Meal plan regenerated");
+    });
+    document.getElementById("coachSavePlanBtn").addEventListener("click", function () {
+      localStorage.setItem(STORAGE_MEALPLAN, JSON.stringify(coachCurrentMealPlan));
+      showToast("Meal plan saved");
+    });
+  }
+
+  document.getElementById("coachGenerateMealPlanBtn").addEventListener("click", function () {
+    var btn = document.getElementById("coachGenerateMealPlanBtn");
+    btn.disabled = true;
+    btn.textContent = "Generating…";
+    // generateMealPlan() itself is synchronous and fast -- this brief
+    // artificial delay just makes the "Generating…" state visibly register
+    // as a real loading step rather than flashing for one frame.
+    setTimeout(function () {
+      coachCurrentMealPlan = generateMealPlan(todayKey());
+      renderMealPlanResult(coachCurrentMealPlan);
+      btn.disabled = false;
+      btn.textContent = "Generate My Meal Plan";
+    }, 200);
+  });
+
+  // ---- "Improve Your Data" ----
+  // Data-completeness formula (this app has no existing metric like this to
+  // reuse, so it's defined here): of the distinct foods (by foodId, food
+  // entries only -- supplements aren't "foods" and carry no equivalent
+  // micronutrient-density expectation) logged TODAY, what percent have real
+  // data for at least 3 of the 30 MICRONUTRIENT_KEYS. Returns null (render as
+  // "log something today" rather than "0%") when nothing food-type has been
+  // logged today yet.
+  function computeDataCompleteness() {
+    var entries = (state.logEntries[todayKey()] || []).filter(function (e) { return e.type !== "supplement" && e.foodId; });
+    var uniqueIds = {};
+    entries.forEach(function (e) { uniqueIds[e.foodId] = true; });
+    var ids = Object.keys(uniqueIds);
+    if (ids.length === 0) return null;
+    var wellTracked = ids.filter(function (id) {
+      var f = allFoods().filter(function (x) { return x.id === id; })[0];
+      if (!f) return false;
+      return MICRONUTRIENT_KEYS.filter(function (k) { return f[k] != null; }).length >= 3;
+    }).length;
+    return Math.round((wellTracked / ids.length) * 100);
+  }
+
+  function renderCoachDataQuality() {
+    var container = document.getElementById("coachDataQualityContent");
+    if (!container) return;
+    var pct = computeDataCompleteness();
+    var completenessHtml = pct == null
+      ? '<div class="empty">Log a food today to see your data-completeness score.</div>'
+      : '<p class="food-meta">Today\'s data completeness: <strong>' + pct + '%</strong> of logged foods have 3+ of the 30 tracked micronutrients on file.</p>';
+
+    var sourcesHtml = getFreeFoodDataSources().map(function (s) {
+      return (
+        '<a class="food-row" href="' + escapeHtml(s.url) + '" target="_blank" rel="noopener" style="text-decoration:none; display:flex;">' +
+          '<span>' +
+            '<span class="food-name">' + escapeHtml(s.name) + '</span>' +
+            '<div class="food-meta">' + escapeHtml(s.bestFor) + '</div>' +
+          '</span>' +
+        '</a>'
+      );
+    }).join("");
+
+    container.innerHTML = completenessHtml +
+      '<div class="food-list" style="max-height:none; margin-top:8px; gap:6px;">' + sourcesHtml + '</div>';
+  }
+
+  // ---- orchestrator (called by switchView("coachView") and closeSettings()) ----
+  function renderCoachView() {
+    renderCoachCheckin();
+    renderCoachHeaderContent();
+    renderCoachMissingNutrients();
+    renderCoachInsights();
+    renderCoachDataQuality();
+    // Meal plan section is deliberately left untouched here: regenerating it
+    // on every view-open/settings-close would silently discard whatever the
+    // user is currently looking at (or already tapped "Log This Meal" on
+    // items from). It's session-state, populated only by the Generate/
+    // Regenerate buttons themselves (see coachCurrentMealPlan above).
+  }
+
   // ---------- bottom nav / view switching ----------
   // There's no existing tabs/view-switching pattern in this app (it was a
   // single scrolling page) — this is a minimal addition: two sibling
@@ -3487,10 +4735,12 @@
     document.getElementById("logView").style.display = viewId === "logView" ? "" : "none";
     document.getElementById("supplementsView").style.display = viewId === "supplementsView" ? "" : "none";
     document.getElementById("microView").style.display = viewId === "microView" ? "" : "none";
+    document.getElementById("coachView").style.display = viewId === "coachView" ? "" : "none";
     navButtons.forEach(function (btn) {
       btn.classList.toggle("active", btn.getAttribute("data-view") === viewId);
     });
     if (viewId === "microView") renderMicroView();
+    if (viewId === "coachView") renderCoachView();
   }
   navButtons.forEach(function (btn) {
     btn.addEventListener("click", function () { switchView(btn.getAttribute("data-view")); });
@@ -3523,6 +4773,24 @@
         showToast("Couldn't load preloaded foods");
       })
       .then(renderAll);
+
+    // Nutrition Coach's 7 health-goal profiles (weight_loss, hair_and_skin,
+    // muscle_gain, energy_and_focus, bone_health, gut_health,
+    // overall_wellness). Same fetch/catch/then(renderAll)-less pattern as
+    // foods.json above, minus the renderAll() hook -- nothing currently
+    // renders directly off state.goalProfiles at init time (that's
+    // ui-builder's job), so there's no render function to chain here yet.
+    // NOTE for pwa-specialist: goals.json still needs to be added to sw.js's
+    // precache list for offline support -- out of scope for this task.
+    fetch("goals.json")
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        state.goalProfiles = data;
+      })
+      .catch(function () {
+        state.goalProfiles = [];
+        showToast("Couldn't load goal profiles");
+      });
 
     loadVitamins();
     loadRdas();

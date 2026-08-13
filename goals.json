@@ -1,0 +1,198 @@
+[
+  {
+    "id": "weight_loss",
+    "label": "Weight Loss",
+    "emoji": "⚖️",
+    "tagline": "80% diet, 20% exercise — let's focus on what you eat",
+    "description": "A moderate calorie deficit paired with higher protein and fiber to keep you full while you lose fat, not muscle. primaryTargets.calorieDeficit is a positive number of calories below your TDEE (500 = eat 500 fewer calories/day than maintenance).",
+    "primaryTargets": {
+      "calorieDeficit": 500,
+      "proteinMultiplier": 1.0,
+      "fiberMin": 25,
+      "sugarMax": 35,
+      "saturatedFatMax": 15
+    },
+    "priorityNutrients": ["iron_mg", "vitaminb12_mcg", "vitamind_mcg", "magnesium_mg", "zinc_mg"],
+    "avoidFlags": ["highSugar", "highSaturatedFat", "highCalorieDensity"],
+    "preferFlags": ["highProtein", "highFiber", "lowCalorieDensity", "highVolume"],
+    "coachingTips": [
+      "Protein and fiber are your best friends for staying full on fewer calories.",
+      "Bulky, low-calorie-density foods like vegetables let you eat a large volume without blowing your budget.",
+      "A slow, steady deficit beats a crash diet — aim for consistency, not perfection.",
+      "Watch liquid calories: sugary drinks and juices add up fast without filling you up."
+    ],
+    "suggestedMealStructure": {
+      "meals": 3,
+      "snacks": 1,
+      "calorieDistribution": [0.30, 0.35, 0.25, 0.10]
+    }
+  },
+  {
+    "id": "hair_and_skin",
+    "label": "Hair & Skin Health",
+    "emoji": "✨",
+    "tagline": "Glow from the inside out",
+    "description": "Calories stay at maintenance (TDEE) — this goal is about nutrient quality, not quantity. Focuses on the vitamins, minerals, and healthy fats most linked to hair growth, skin elasticity, and a healthy complexion.",
+    "primaryTargets": {
+      "calorieDeficit": 0,
+      "proteinMultiplier": 0.8,
+      "fiberMin": 25,
+      "sugarMax": 50,
+      "saturatedFatMax": 20
+    },
+    "priorityNutrients": ["biotin_mcg", "zinc_mg", "vitaminc_mg", "vitamine_mg", "omega3_mg", "vitamina_mcg", "selenium_mcg"],
+    "avoidFlags": [],
+    "preferFlags": ["omega3Rich", "zincRich", "vitaminCRich", "biotinSource"],
+    "coachingTips": [
+      "Omega-3s from fatty fish and nuts help keep skin supple and support scalp health.",
+      "Vitamin C helps your body build collagen — pair it with iron-rich foods to boost absorption.",
+      "Biotin-rich foods like eggs, salmon, nuts, and seeds support hair strength and growth.",
+      "Hydration matters as much as nutrients — don't forget your water intake."
+    ],
+    "suggestedMealStructure": {
+      "meals": 3,
+      "snacks": 1,
+      "calorieDistribution": [0.25, 0.35, 0.30, 0.10]
+    }
+  },
+  {
+    "id": "muscle_gain",
+    "label": "Muscle Gain",
+    "emoji": "💪",
+    "tagline": "Fuel the build — eat to grow",
+    "description": "A calorie surplus to support muscle growth alongside training. primaryTargets.calorieDeficit uses the same sign convention as Weight Loss but negative: -250 means a 250 calorie surplus above your TDEE. Protein multiplier stays at 1.0g per lb bodyweight, but on top of a surplus this yields a higher absolute protein target than the same multiplier during a deficit.",
+    "primaryTargets": {
+      "calorieDeficit": -250,
+      "proteinMultiplier": 1.0,
+      "fiberMin": 25,
+      "sugarMax": 50,
+      "saturatedFatMax": 25
+    },
+    "priorityNutrients": ["zinc_mg", "magnesium_mg", "vitaminb12_mcg", "iron_mg", "phosphorus_mg", "selenium_mcg"],
+    "avoidFlags": [],
+    "preferFlags": ["highProtein", "magnesiumRich", "zincRich"],
+    "coachingTips": [
+      "Spread protein evenly across meals instead of loading it all at dinner.",
+      "Zinc and magnesium both support the hormonal side of muscle recovery and growth.",
+      "A surplus doesn't mean unlimited junk — favor nutrient-dense calories over empty ones.",
+      "Track consistently: small, steady surpluses build muscle with less added fat than big ones."
+    ],
+    "suggestedMealStructure": {
+      "meals": 4,
+      "snacks": 2,
+      "calorieDistribution": [0.25, 0.30, 0.25, 0.10, 0.05, 0.05]
+    }
+  },
+  {
+    "id": "energy_and_focus",
+    "label": "Energy & Focus",
+    "emoji": "⚡",
+    "tagline": "Steady fuel for a sharp mind",
+    "description": "Calories stay at maintenance (TDEE). Prioritizes the nutrients most tied to steady energy levels and mental clarity, while capping sugar to avoid energy crashes.",
+    "primaryTargets": {
+      "calorieDeficit": 0,
+      "proteinMultiplier": 0.8,
+      "fiberMin": 25,
+      "sugarMax": 40,
+      "saturatedFatMax": 20
+    },
+    "priorityNutrients": ["iron_mg", "magnesium_mg", "vitaminb12_mcg", "vitaminb6_mg", "folate_mcg", "vitaminc_mg"],
+    "avoidFlags": ["highSugar"],
+    "preferFlags": ["ironRich", "magnesiumRich", "highFiber"],
+    "coachingTips": [
+      "Low iron is one of the most common hidden causes of fatigue — prioritize iron-rich foods.",
+      "Complex carbs with fiber release energy more steadily than refined sugar.",
+      "B-vitamins (B6, B12, folate) are essential for converting food into usable energy.",
+      "Sugar spikes feel good for 20 minutes and cost you the next two hours — favor whole foods."
+    ],
+    "suggestedMealStructure": {
+      "meals": 3,
+      "snacks": 1,
+      "calorieDistribution": [0.30, 0.35, 0.25, 0.10]
+    }
+  },
+  {
+    "id": "bone_health",
+    "label": "Bone Health",
+    "emoji": "🦴",
+    "tagline": "Build strength that lasts",
+    "description": "Calories stay at maintenance (TDEE). Prioritizes calcium and its key cofactors — vitamin D, vitamin K, magnesium, and phosphorus — which all work together for bone density and strength.",
+    "primaryTargets": {
+      "calorieDeficit": 0,
+      "proteinMultiplier": 0.8,
+      "fiberMin": 25,
+      "sugarMax": 50,
+      "saturatedFatMax": 20
+    },
+    "priorityNutrients": ["calcium_mg", "vitamind_mcg", "vitamink_mcg", "magnesium_mg", "phosphorus_mg"],
+    "avoidFlags": [],
+    "preferFlags": ["calciumRich", "magnesiumRich"],
+    "coachingTips": [
+      "Calcium needs vitamin D to be absorbed well — pair dairy or leafy greens with some sun or fortified foods.",
+      "Magnesium and phosphorus are often overlooked but are just as important as calcium for bone density.",
+      "Weight-bearing movement plus these nutrients does more for bone strength than diet alone.",
+      "Leafy greens like spinach and broccoli offer both calcium and vitamin K in one food."
+    ],
+    "suggestedMealStructure": {
+      "meals": 3,
+      "snacks": 1,
+      "calorieDistribution": [0.30, 0.35, 0.25, 0.10]
+    }
+  },
+  {
+    "id": "gut_health",
+    "label": "Gut Health",
+    "emoji": "🌿",
+    "tagline": "Happy gut, happier you",
+    "description": "Calories stay at maintenance (TDEE). Pushes fiber intake higher than the other goals (30g+) since fiber feeds beneficial gut bacteria, and caps sugar since excess sugar can disrupt gut flora balance.",
+    "primaryTargets": {
+      "calorieDeficit": 0,
+      "proteinMultiplier": 0.8,
+      "fiberMin": 30,
+      "sugarMax": 40,
+      "saturatedFatMax": 20
+    },
+    "priorityNutrients": ["folate_mcg", "magnesium_mg", "vitaminc_mg"],
+    "avoidFlags": ["highSugar"],
+    "preferFlags": ["highFiber", "vitaminCRich"],
+    "coachingTips": [
+      "Fiber is fuel for your gut microbiome — aim for a variety of plant sources, not just one.",
+      "Excess added sugar can feed less-friendly gut bacteria — keep it in check.",
+      "Fermented foods and fiber-rich vegetables are a great everyday combination.",
+      "Introduce more fiber gradually and drink plenty of water to avoid digestive discomfort."
+    ],
+    "suggestedMealStructure": {
+      "meals": 3,
+      "snacks": 1,
+      "calorieDistribution": [0.30, 0.35, 0.25, 0.10]
+    }
+  },
+  {
+    "id": "overall_wellness",
+    "label": "Overall Wellness",
+    "emoji": "🌟",
+    "tagline": "Hit all your bases every day",
+    "description": "The default goal, used when a user hasn't selected a specific focus. Calories stay at maintenance (TDEE) with balanced macro targets. priorityNutrients is intentionally left empty here: rather than a fixed nutrient list, the real behavior is to dynamically sort all tracked nutrients by whichever the user is furthest short of that day — that sorting logic lives in the log-engine layer, not in this data file.",
+    "primaryTargets": {
+      "calorieDeficit": 0,
+      "proteinMultiplier": 0.8,
+      "fiberMin": 25,
+      "sugarMax": 50,
+      "saturatedFatMax": 20
+    },
+    "priorityNutrients": [],
+    "avoidFlags": [],
+    "preferFlags": [],
+    "coachingTips": [
+      "Balance beats extremes — a variety of whole foods covers more nutrient bases than any single 'superfood'.",
+      "Pick a specific goal above if you want more targeted coaching for weight, muscle, energy, or a specific health focus.",
+      "Small, consistent habits compound into big results over months, not days.",
+      "Check your daily nutrient breakdown to spot which areas need the most attention."
+    ],
+    "suggestedMealStructure": {
+      "meals": 3,
+      "snacks": 1,
+      "calorieDistribution": [0.30, 0.35, 0.25, 0.10]
+    }
+  }
+]
