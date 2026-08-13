@@ -287,6 +287,14 @@ These agents live in `.claude/agents/` and are auto-available every session.
   hundreds of servings (e.g. "Amount: 240, Unit: 240 ml (1 cup)" for
   milk) — user-reported with a screenshot; "native" unit now always
   means "servings" (amount defaults to 1) instead of a raw quantity
+- bug_011 ✅ FIXED — new tappable Today's-totals .stat tiles (tap a
+  macro tile to see contributors) had no min-height, falling short of
+  the app's 44px touch-target convention; .stat[data-key] now sets
+  min-height:44px
+- bug_012 ✅ FIXED — same tappable tiles were plain divs, unreachable
+  by keyboard/screen-reader; totalsTileHtml() now emits a real
+  <button> (matches food-row/cal-day/recent-day-chip convention),
+  giving native Enter/Space activation with no separate keydown handler
 
 ### Known Gaps (not bugs, design decisions to revisit)
 - QA qa-reviewer audit of micronutrient feature not yet run
