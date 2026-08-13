@@ -56,7 +56,7 @@ These agents live in `.claude/agents/` and are auto-available every session.
 - [x] CLAUDE.md — project memory (this file)
 - [x] .claude/agents/ — 7 specialist agents
 - [x] bugs.json — persistent bug backlog (10 bugs logged, all fixed)
-- [x] foods.json — 79 preloaded items
+- [x] foods.json — 121 preloaded items
       (Kirkland proteins, dairy, nuts, snacks, frozen, beverages,
       user daily foods: coffee, honey, 1% milk, apple, string
       cheese, golden kiwi, Barebells bars + Costco staples; the
@@ -73,7 +73,22 @@ These agents live in `.claude/agents/` and are auto-available every session.
       white rice's first draft (macro/micronutrient values 2-10x too
       low for "enriched" rice despite the notes claiming otherwise)
       by cross-checking live against USDA FoodData Central before
-      shipping, not by trusting the draft's stated confidence)
+      shipping, not by trusting the draft's stated confidence.
+      2026-08-13: added 42 common household staples the dataset was
+      missing entirely — fresh produce (tomato, onion, garlic,
+      cucumber, romaine, corn, green beans, mushrooms, potato, grapes,
+      orange, strawberries, blueberries), everyday proteins (bacon,
+      ground turkey, pork chop, deli ham, canned tuna, plain rotisserie
+      chicken, tilapia), basic dairy (butter, American cheese, cream
+      cheese, parmesan, 2% milk, almond milk), grains (pasta, flour
+      tortilla, bagel, corn flakes, saltines), condiments (mayo,
+      mustard, ranch, marinara, olive oil), snacks (chips, popcorn,
+      pretzels, a plain granola bar), and 2 beverages (cola, a sports
+      drink) — distinct ids used wherever a concept already existed in
+      another form (orange vs. the existing orange-juice entries,
+      olive-oil vs. avocado-oil/coconut-oil, strawberries/blueberries
+      fresh vs. the existing frozen entries, rotisserie-chicken vs.
+      the existing "chicken salad, rotisserie style" entry))
 - [x] vitamins.json — 20 Kirkland supplement entries
 - [x] rdas.json — Harvard RDA/AI table, 30 nutrients,
       personalized by age + sex
