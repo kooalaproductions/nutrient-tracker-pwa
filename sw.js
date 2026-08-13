@@ -1,6 +1,6 @@
 "use strict";
 
-var CACHE_NAME = "nutrient-tracker-v6";
+var CACHE_NAME = "nutrient-tracker-v7";
 var PRECACHE_URLS = [
   "./",
   "./index.html",
@@ -8,6 +8,7 @@ var PRECACHE_URLS = [
   "./foods.json",
   "./vitamins.json",
   "./rdas.json",
+  "./goals.json",
   "./html5-qrcode.min.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

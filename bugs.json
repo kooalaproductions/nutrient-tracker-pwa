@@ -166,14 +166,14 @@
     "id": "bug_013",
     "date": "2026-08-13",
     "severity": "warning",
-    "status": "open",
+    "status": "fixed",
     "area": "pwa",
     "title": "goals.json omitted from sw.js precache list -- Nutrition Coach silently degrades to 'maintain calories' when offline before first successful fetch",
     "description": "init() (index.html ~4785) fetches \"goals.json\" into state.goalProfiles on every app load, with a .catch() that sets state.goalProfiles = [] and shows a toast on failure -- the same fetch/catch pattern already used for foods.json. However, unlike foods.json/vitamins.json/rdas.json (all three listed in sw.js's PRECACHE_URLS, lines 4-14), goals.json was never added to that list; the code's own comment directly above the fetch call (index.html ~4783-4784) flags this explicitly: 'NOTE for pwa-specialist: goals.json still needs to be added to sw.js's precache list for offline support -- out of scope for this task.' Because the service worker's fetch handler (sw.js ~42-62) only caches a resource opportunistically after a successful network response, any user who is offline (or has flaky connectivity) the first time this updated index.html loads -- e.g. right after updating the installed PWA, or on a fresh install with no immediate connectivity -- gets state.goalProfiles = [] with no retry. This doesn't crash the app (every goalProfiles read is defensively `(state.goalProfiles || [])`), but it silently breaks goal-aware personalization rather than surfacing a clear error: getUserTDEE()'s primaryGoal lookup finds nothing, so pt = {} and calorieDeficit falls back to 0 -- a user who selected weight_loss (500 kcal deficit) or muscle_gain (250 kcal surplus) instead gets served a flat maintenance-calorie target with no indication their goal selection isn't being applied. renderHealthGoalCards() also gets stuck permanently showing 'Loading goals…' with no retry affordance. The one-time toast (\"Couldn't load goal profiles\") is easy to miss and doesn't explain the downstream effect on calorie targets.",
     "affectedLines": "sw.js lines 4-14 (PRECACHE_URLS, missing \"./goals.json\"); index.html ~4777-4793 (init()'s goals.json fetch/catch), ~2105-2108 (getUserTDEE()'s calorieDeficit fallback to 0 when goalProfiles is empty), ~4308-4315 (renderHealthGoalCards()'s permanent 'Loading goals…' state)",
     "foundBy": "qa-reviewer",
-    "fixedBy": null,
-    "fixedDate": null,
-    "fixNotes": null
+    "fixedBy": "pwa-specialist",
+    "fixedDate": "2026-08-13",
+    "fixNotes": "Added \"./goals.json\" to sw.js's PRECACHE_URLS (right after \"./rdas.json\", grouped with the other data files) and bumped CACHE_NAME from nutrient-tracker-v6 to nutrient-tracker-v7 so installed devices pick up the updated precache list. No other lines in sw.js changed."
   }
 ]
