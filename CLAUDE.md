@@ -249,8 +249,50 @@ These agents live in `.claude/agents/` and are auto-available every session.
       backdrop-click-to-close, and confirmed zero regression on both the
       History modal's totals tiles and the Micros view's own contributor
       breakdown.)
+- [x] index.html, goals.json, foods.json — Nutrition Coach: smart
+      suggestions, meal planning & personalized goals
+      (built via the full orchestrator pipeline, data-builder →
+      log-engine → ui-builder, sequential, HIGH risk — paused for
+      user confirmation before commit. goals.json: 7 health-goal
+      profiles (weight loss, hair/skin, muscle gain, energy, bone
+      health, gut health, overall wellness); foods.json: nutritionScore
+      (1-10) + flags added to all 79 items. 10 new functions —
+      getUserTDEE() (Mifflin-St Jeor, reuses the existing
+      LB_TO_KG/IN_TO_CM/ACTIVITY_MULTIPLIERS constants), getDailyTargets(),
+      getMissingNutrients(), getSuggestedFoods(), generateMealPlan(),
+      getCoachingInsights(), getOnboardingQuestions(),
+      getFreeFoodDataSources(), getActiveGoals(), logMealPlanItems().
+      New Coach tab (🧠, 4th bottom-nav item — the nav was 3 items
+      before this, not 4 as originally assumed) with a daily briefing,
+      missing-nutrient suggestions (tap-to-log via the existing
+      openLogModal()), coaching insight cards, a meal-plan generator
+      with Log This Meal/Regenerate/Save, and a collapsible data-quality
+      section linking 5 free external nutrition databases. Goal
+      selection (multi-select, max 3) added to both onboarding and
+      Settings via a shared renderHealthGoalCards() helper.
+      IMPORTANT NAMING NOTE: the new selected-goal-IDs array is stored
+      under STORAGE_HEALTH_GOALS="nt_healthGoals" — NOT the pre-existing
+      STORAGE_GOALS="nt_goals", which already held an unrelated,
+      shipped feature (per-nutrient calorie/macro goal overrides,
+      read by loadGoals()/getTodayGoalProgress()/the totals tiles).
+      This collision was caught during orchestrator intake before any
+      code was written; nt_goals is completely untouched.
+      qa-reviewer audit (model bumped to sonnet for this pass): NEEDS
+      FIXES → one warning (bug_013), no criticals. Hand-verified
+      getUserTDEE() math, meal-plan calorie accuracy (within ±2.5%),
+      the 2-slot-per-food cap, max-3 goal selection, and confirmed no
+      regression on bug_003 (micronutrient snapshotting) or bug_010
+      (servings-based multiplier) through the new logMealPlanItems()
+      path. One scope simplification from the original spec:
+      getOnboardingQuestions() returns advisory {question, why, action}
+      cards, not interactive input-widget schemas — rendered as such
+      rather than inventing form fields the function doesn't support.)
 
 ### 🔲 Pending (priority order)
+- [ ] pwa-specialist: add goals.json to sw.js's PRECACHE_URLS
+      (bug_013 — until this lands, a user offline on first load gets
+      state.goalProfiles=[] with no retry, silently collapsing every
+      goal's calorie deficit/surplus to flat maintenance calories)
 - [ ] iPhone home screen install + real device test
       (Option C — foundation is solid, needs on-device verify)
 - [ ] Weekly macro chart UI
@@ -295,6 +337,9 @@ These agents live in `.claude/agents/` and are auto-available every session.
   by keyboard/screen-reader; totalsTileHtml() now emits a real
   <button> (matches food-row/cal-day/recent-day-chip convention),
   giving native Enter/Space activation with no separate keydown handler
+- bug_013 🔲 OPEN (warning/pwa) — goals.json missing from sw.js's
+  PRECACHE_URLS; Nutrition Coach silently degrades to flat maintenance
+  calories if the user is offline on first load after this update
 
 ### Known Gaps (not bugs, design decisions to revisit)
 - QA qa-reviewer audit of micronutrient feature not yet run
