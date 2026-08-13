@@ -133,5 +133,33 @@
     "fixedBy": "claude",
     "fixedDate": "2026-08-12",
     "fixNotes": "Redesigned so the native/default unit option always means \"number of servings\" instead of \"raw quantity in the food's own unit\": label changed to a plain \"servings\" for every food (was food.servingSize + food.servingUnit), convertLogQuantityToMultiplier()'s native case changed from amount/food.servingSize to amount directly (no division), and the Amount field now defaults to 1 (was food.servingSize) both on modal open and when switching back to the native unit. The default \"open modal, tap Log it\" interaction is mathematically identical before and after (multiplier 1) -- verified across all 79 foods.json entries via 10 executable tests, not just reasoned about. Non-native unit paths (g/oz/lb/cup/tbsp/tsp/ml/fl-oz) were untouched. qa-reviewer independent audit: no findings. Live-tested on the exact milk case from the user's screenshot plus a 2-cup food (spinach) -- both now show Amount:1/Unit:servings and log the correct kcal."
+  },
+  {
+    "id": "bug_011",
+    "date": "2026-08-13",
+    "severity": "warning",
+    "status": "fixed",
+    "area": "ui",
+    "title": "Today's-totals tiles now tappable but have no touch-target sizing",
+    "description": "Commit 38da1d8 (\"tap a macro tile to see which foods contributed to it\") made every .stat tile in #totalsGrid clickable -- renderTotals() (index.html ~line 2020-2031) now attaches a click listener to each .stat element that opens openMacroContributorsModal(). However the .stat CSS rule (index.html line 82: '.stat { text-align: center; }') and the .stat[data-key] rule added alongside it (line 83: 'cursor: pointer;') give the tile no min-height, min-width, or padding at all -- unlike every other interactive element in this app, which follows an established 44px touch-target convention (.remove-btn/.check-row/.cal-nav-btn/.micro-contributors-toggle/#scanBarcodeBtn, the last two added specifically to fix bug_006 and bug_009, the same class of issue). Measured against the actual rendered content: a tile with no goal set (r.goal == null, i.e. state.goals is empty -- true for any user who taps \"Skip for now\" on onboarding, which is an explicit, persistent, easily-reached state per showOnboarding()/onboardingSkipBtn) renders only the 16px value line plus the 10.5px label line with a 2px margin, roughly 34px total tap-target height -- well under 44px. Once a goal exists the .sub line and 4px progress bar add a bit more height, but still with no explicit floor, so it remains goal-content-dependent rather than guaranteed.",
+    "affectedLines": "index.html line 82-83 (.stat / .stat[data-key] CSS), ~line 2020-2031 (renderTotals()), ~line 1927-2018 (totalsTileHtml())",
+    "foundBy": "qa-reviewer",
+    "fixedBy": "bug-fixer",
+    "fixedDate": "2026-08-13",
+    "fixNotes": "Added min-height: 44px to the .stat[data-key] CSS rule (index.html line 83), matching the app's established 44px touch-target convention (bug_006/bug_009) -- scoped to the attribute selector so only the tappable totals-card tiles are affected, leaving the read-only History-modal .stat tiles (totalsGridHtml(), which never sets data-key) untouched."
+  },
+  {
+    "id": "bug_012",
+    "date": "2026-08-13",
+    "severity": "warning",
+    "status": "fixed",
+    "area": "accessibility",
+    "title": "New macro-tile-tap feature unreachable by keyboard/screen reader",
+    "description": "The same new tap-to-see-contributors feature (commit 38da1d8, openMacroContributorsModal(), index.html ~line 2599-2633) renders each tappable tile as a plain '<div class=\"stat\" data-key=\"...\">' (see totalsTileHtml(), ~line 2010-2017) with only a mouse/touch click listener attached in renderTotals() -- no <button> element, no role=\"button\", no tabindex, no keydown handler. This breaks with every other clickable list item in this same file, which all use real <button> elements specifically so they're focusable and keyboard/screen-reader operable: renderFoodList()'s food-row buttons, renderRecentDays()'s .recent-day-chip buttons, and renderCalendar()'s .cal-day buttons are each created via document.createElement(\"button\"), and the pre-existing #settingsBtn/.nav-btn/.cal-nav-btn controls are all <button> tags in the markup. Because .stat tiles are non-focusable divs, a keyboard-only or screen-reader user has no way to discover or trigger the new contributor breakdown at all -- the feature is 100% mouse/touch-only.",
+    "affectedLines": "index.html ~line 1927-2018 (totalsTileHtml(), builds '<div class=\"stat\" ...>'), ~line 2020-2031 (renderTotals(), attaches click-only listener)",
+    "foundBy": "qa-reviewer",
+    "fixedBy": "bug-fixer",
+    "fixedDate": "2026-08-13",
+    "fixNotes": "totalsTileHtml() (index.html ~line 2021) now emits '<button type=\"button\" class=\"stat\" data-key=\"...\">' instead of a plain '<div class=\"stat\" data-key=\"...\">', matching the app's established real-<button> pattern for tappable list items (food-row/cal-day/recent-day-chip) -- native buttons are focusable and fire click on both Enter and Space with no extra keydown handler needed, so renderTotals()'s existing click listener (unchanged) now works for keyboard and screen-reader users too. Added a CSS reset (border/background/padding/font/color/-webkit-appearance) to the .stat[data-key] rule so the button renders visually identical to the previous div (this rule already carried bug_011's min-height:44px fix). The read-only History-modal tiles (totalsGridHtml(), no data-key) are untouched and remain plain non-interactive divs."
   }
 ]

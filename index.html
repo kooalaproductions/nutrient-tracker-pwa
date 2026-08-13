@@ -80,7 +80,17 @@
     gap: 8px;
   }
   .stat { text-align: center; }
-  .stat[data-key] { cursor: pointer; }
+  .stat[data-key] {
+    cursor: pointer;
+    min-height: 44px;
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    color: inherit;
+    -webkit-appearance: none;
+  }
   .stat .value { font-size: 16px; font-weight: 700; color: var(--accent); }
   .stat .label { font-size: 10.5px; color: var(--text-secondary); margin-top: 2px; }
   .stat .sub { font-size: 9.5px; color: var(--text-secondary); margin-top: 2px; }
@@ -2008,12 +2018,12 @@
     }
 
     return (
-      '<div class="stat" data-key="' + r.key + '">' +
+      '<button type="button" class="stat" data-key="' + r.key + '">' +
         '<div class="value" style="color:' + tileColor + ';">' + valueText + '</div>' +
         '<div class="label">' + labelText + '</div>' +
         subHtml +
         barHtml +
-      '</div>'
+      '</button>'
     );
   }
 
