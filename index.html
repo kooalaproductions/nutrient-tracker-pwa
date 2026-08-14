@@ -3341,10 +3341,11 @@
   // greyed out via .micro-row-no-data, no bar (nothing to show progress on).
   function microNoDataRowHtml(key) {
     var meta = state.rdas[key];
+    var aiHtml = meta.aiOnly ? ' <span class="ai-badge" title="Adequate Intake — no formal RDA exists for this nutrient, so this is a rougher estimate">AI (est.)</span>' : '';
     return (
       '<div class="micro-row micro-row-no-data">' +
         '<div class="micro-row-top">' +
-          '<span class="micro-name">' + escapeHtml(meta.displayName) + '</span>' +
+          '<span class="micro-name">' + escapeHtml(meta.displayName) + aiHtml + '</span>' +
           '<span class="micro-amount">Not logged today</span>' +
         '</div>' +
       '</div>'
