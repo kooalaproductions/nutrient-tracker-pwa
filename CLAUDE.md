@@ -347,7 +347,22 @@ These agents live in `.claude/agents/` and are auto-available every session.
       tab. Deliberately NOT a recipe database or API call: this app is
       backend-less and offline-first by design, so a search link was
       recommended over either a large low-coverage static recipe
-      dataset or an external API dependency, and the user agreed.)
+      dataset or an external API dependency, and the user agreed.
+      2026-08-13 (fourth pass): fixed a real usability gap the user
+      caught -- generateMealPlan()'s per-slot picking was fully
+      deterministic, so clicking Regenerate with nothing else changed
+      reproduced an identical plan. Fixed with exclusion-awareness
+      (prefer a food not already in play, fall back to a repeat only
+      when a slot genuinely has no other candidate) rather than
+      randomization, which would have degraded the nutrient-coverage
+      scoring. Extracted the per-slot logic into buildMealSlotItems()
+      (shared by generateMealPlan() and the new regenerateMealSlot())
+      per the user's own suggestion to also support swapping just one
+      meal (Breakfast/Lunch/Dinner/Snack) independently -- each meal
+      card now has its own "🔄 New [Slot]" button, and both per-meal
+      swaps and whole-plan regenerates go through the same undo stash,
+      so "Back to Previous Plan" covers both. qa-reviewer targeted
+      audit of the refactor: PASS, no findings.)
 
 ### 🔲 Pending (priority order)
 - [ ] iPhone home screen install + real device test
