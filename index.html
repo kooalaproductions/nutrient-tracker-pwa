@@ -480,6 +480,18 @@
   }
   .coach-insight-card:last-child { margin-bottom: 0; }
 
+  /* "Complete Your Nutrients" supplement suggestion (renderCoachMissingNutrients(),
+     via getSuggestedSupplements()) -- stacks on top of .food-row exactly like
+     .coach-suggestion-row does (class="food-row coach-supplement-suggestion"),
+     just overriding the background/border to the same accent-tinted chip
+     language already used by .supplement-log-btn / .micro-badge.met /
+     .goal-card.selected, so it reads as a distinct, secondary/optional option
+     next to the plain white food-suggestion buttons. */
+  .coach-supplement-suggestion {
+    background: var(--accent-light);
+    border-color: var(--accent);
+  }
+
   /* button.secondary/.primary already meet 44px via their own padding except
      where content is short -- these scoped rules follow the same established
      pattern as #scanBarcodeBtn/#barcodeModalCancel/#addFoodMicroToggle above
@@ -487,7 +499,7 @@
      widening the shared rule everywhere it's used). */
   #coachGenerateMealPlanBtn, #coachRegeneratePlanBtn, #coachSavePlanBtn,
   .coach-log-meal-btn, #coachCheckinSaveBtn, #coachCompleteProfileBtn,
-  .coach-suggestion-row, #coachDataQualityContent .food-row {
+  .coach-suggestion-row, .coach-supplement-suggestion, #coachDataQualityContent .food-row {
     min-height: 44px;
   }
 </style>
@@ -686,6 +698,7 @@
 
   <section class="card">
     <h2>🎯 Complete Your Nutrients</h2>
+    <p class="food-meta" style="margin-top:-6px; margin-bottom:10px;">Food first — supplements can help close persistent gaps.</p>
     <div id="coachMissingNutrients"></div>
   </section>
 
@@ -2260,6 +2273,96 @@
       seen[f.id] = true;
       out.push(f);
     }
+    return out;
+  }
+
+  // Combines getMissingNutrients(dateString) with state.vitamins to suggest
+  // ONE supplement per missing nutrient (highest-dvPercent match wins),
+  // reusing every already-verified piece of Coach/micronutrient/supplement
+  // machinery above rather than reimplementing any of it: getMissingNutrients()
+  // for the prioritized gap list, isSupplementOnlyUL()/getUserRDA()/
+  // getDailySupplementMicronutrientTotals() for the UL safety check, and
+  // getTodaySupplementLog() (see "supplement log actions" above) for what's
+  // already been logged.
+  //
+  // "Already logged today" dedup (step 3 of the brief) intentionally checks
+  // TODAY's log (getTodaySupplementLog() -> todayKey()) regardless of the
+  // dateString param, mirroring getSuggestedFoods()'s own loggedCounts
+  // convention just above -- "don't re-suggest something already in today's
+  // log" is about the day the user is actually about to log a NEW dose on,
+  // not the (possibly past) date whose gaps are being scored. Same reasoning
+  // applies to the UL safety check: getDailySupplementMicronutrientTotals(dateString)
+  // is still called with dateString per the brief (so a past-date lookup asks
+  // "would this have been safe that day"), but in the normal case dateString
+  // IS todayKey() so the two agree.
+  //
+  // A missing nutrient is skipped entirely (not just the specific vitamin id)
+  // if ANY supplement targeting that same nutrientKey was already logged
+  // today, per the brief's "it (or another supplement targeting the same
+  // nutrient)" -- entry.itemId is the field logSupplement() (see above) writes
+  // onto a supplement log entry to link it back to its vitamins.json id.
+  function getSuggestedSupplements(dateString, limit) {
+    limit = limit || 5;
+    var missing = getMissingNutrients(dateString);
+
+    var todaysSupplementLog = getTodaySupplementLog();
+    var loggedVitaminIds = {};
+    var loggedNutrientKeys = {};
+    todaysSupplementLog.forEach(function (e) {
+      loggedVitaminIds[e.itemId] = true;
+      var loggedVitamin = state.vitamins.filter(function (v) { return v.id === e.itemId; })[0];
+      if (loggedVitamin && loggedVitamin.nutrientKey) loggedNutrientKeys[loggedVitamin.nutrientKey] = true;
+    });
+
+    var supplementTotals = getDailySupplementMicronutrientTotals(dateString);
+
+    var out = [];
+    for (var i = 0; i < missing.length && out.length < limit; i++) {
+      var m = missing[i];
+      if (loggedNutrientKeys[m.key]) continue;
+
+      var candidates = state.vitamins.filter(function (v) {
+        return v.nutrientKey === m.key && !loggedVitaminIds[v.id];
+      });
+      if (candidates.length === 0) continue;
+
+      // Safety check (step 4): for nutrients whose upper limit only applies
+      // to supplement-sourced intake, drop any candidate whose common dose
+      // would push today's supplement-sourced total for this nutrient over
+      // the limit. amountPerDose * conversionFactor is the contribution AT
+      // commonDose (multiplier 1) -- the exact same per-common-dose-unit
+      // value logSupplement() snapshots onto entry[nutrientKey], see above.
+      if (isSupplementOnlyUL(m.key)) {
+        var rdaInfo = getUserRDA(m.key);
+        if (rdaInfo.upperLimit != null) {
+          candidates = candidates.filter(function (v) {
+            var contribution = Number(v.amountPerDose) * (v.conversionFactor != null ? v.conversionFactor : 1);
+            var projected = (supplementTotals[m.key] || 0) + contribution;
+            return projected <= rdaInfo.upperLimit;
+          });
+        }
+      }
+      if (candidates.length === 0) continue;
+
+      // Step 5: highest dvPercent (biggest single-dose contribution) wins --
+      // one suggestion per distinct missing nutrient, not every option.
+      candidates.sort(function (a, b) { return (b.dvPercent || 0) - (a.dvPercent || 0); });
+      var best = candidates[0];
+
+      out.push({
+        vitaminId: best.id,
+        name: best.name,
+        brand: best.brand,
+        nutrientKey: best.nutrientKey,
+        nutrientDisplayName: m.displayName,
+        amountPerDose: best.amountPerDose,
+        amountUnit: best.amountUnit,
+        dvPercent: best.dvPercent,
+        missingNutrientRemaining: m.remaining,
+        missingNutrientUnit: m.unit
+      });
+    }
+
     return out;
   }
 
@@ -4505,6 +4608,16 @@
     // where practical, falling back to the shared pool's own top picks when
     // none of them happen to carry that key.
     var pool = getSuggestedFoods(todayKey(), 8);
+    // One supplement suggestion per missing nutrient (log-engine's own
+    // safety-filtered/already-logged-aware scoring, not re-implemented here
+    // -- see getSuggestedSupplements()'s own doc comment). Indexed by
+    // nutrientKey, which is guaranteed to equal the missing-nutrient's own
+    // `key` for any entry it returned (it only ever matches vitamins where
+    // v.nutrientKey === m.key), so a plain lookup by m.key below is exact,
+    // never a mismatch.
+    var suggestedSupplements = getSuggestedSupplements(todayKey(), 5);
+    var supplementByKey = {};
+    suggestedSupplements.forEach(function (s) { supplementByKey[s.nutrientKey] = s; });
     container.innerHTML = missing.map(function (m) {
       var pct = Math.min(100, m.percentComplete);
       var barColor = pct < 25 ? "var(--danger)" : (pct < 75 ? "#FFC107" : "#74C69D");
@@ -4522,6 +4635,26 @@
           '</button>'
         );
       }).join("");
+      // Secondary/optional supplement suggestion for this same nutrient, if
+      // getSuggestedSupplements() found a safe, not-already-logged match --
+      // rendered below the food suggestions, still inside this same
+      // .micro-row (not a separate top-level section), per this feature's
+      // "food first" framing (see the card's caption above #coachMissingNutrients).
+      var supplement = supplementByKey[m.key];
+      var supplementHtml = "";
+      if (supplement) {
+        var suppBrandPrefix = supplement.brand ? escapeHtml(supplement.brand) + ' · ' : '';
+        supplementHtml =
+          '<div style="margin-top:6px;">' +
+            '<button type="button" class="food-row coach-supplement-suggestion" data-vitamin-id="' + escapeHtml(supplement.vitaminId) + '">' +
+              '<span>' +
+                '<span class="food-name">💊 ' + escapeHtml(supplement.name) + '</span>' +
+                '<div class="food-meta">' + suppBrandPrefix + fmt(supplement.amountPerDose) + ' ' + escapeHtml(supplement.amountUnit) + '</div>' +
+              '</span>' +
+              '<span class="food-cal">' + fmt(supplement.dvPercent) + '% DV</span>' +
+            '</button>' +
+          '</div>';
+      }
       return (
         '<div class="micro-row">' +
           '<div class="micro-row-top">' +
@@ -4530,6 +4663,7 @@
           '</div>' +
           '<div class="stat-bar-track"><div class="stat-bar-fill" style="width:' + pct + '%; background:' + barColor + ';"></div></div>' +
           '<div class="food-list" style="max-height:none; margin-top:8px; gap:6px;">' + (foodsHtml || '<div class="empty">No suggestions available.</div>') + '</div>' +
+          supplementHtml +
         '</div>'
       );
     }).join("");
@@ -4537,6 +4671,11 @@
       btn.addEventListener("click", function () {
         var food = allFoods().filter(function (f) { return f.id === btn.getAttribute("data-food-id"); })[0];
         if (food) openLogModal(food); // same log-food modal used from the Log tab's food list -- not a second modal
+      });
+    });
+    container.querySelectorAll(".coach-supplement-suggestion").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        openSupplementModal(btn.getAttribute("data-vitamin-id")); // same supplement-logging modal used from the Supplements tab -- not a second modal
       });
     });
   }
