@@ -498,6 +498,7 @@
      (shared classes falling a bit short, fixed per-id/class rather than
      widening the shared rule everywhere it's used). */
   #coachGenerateMealPlanBtn, #coachRegeneratePlanBtn, #coachSavePlanBtn,
+  #coachBackToPreviousPlanBtn,
   .coach-log-meal-btn, #coachCheckinSaveBtn, #coachCompleteProfileBtn,
   .coach-suggestion-row, .coach-supplement-suggestion, #coachDataQualityContent .food-row {
     min-height: 44px;
@@ -4759,6 +4760,13 @@
 
   // ---- "Suggested Meal Plan" ----
   var coachCurrentMealPlan = null;
+  // Whatever was showing in coachCurrentMealPlan right before the most recent
+  // Generate/Regenerate overwrote it -- lets #coachBackToPreviousPlanBtn swap
+  // the two back (see its click handler below). Starts null like
+  // coachCurrentMealPlan; a null "previous" is harmless, it just means the
+  // back button doesn't render yet (nothing to go back to on the very first
+  // generate) -- see the conditional below.
+  var coachPreviousMealPlan = null;
 
   function renderMealPlanResult(plan) {
     var container = document.getElementById("coachMealPlanResult");
@@ -4777,12 +4785,25 @@
           '</div>'
         );
       }).join("");
+      // "Find a recipe" -- a general web search built from this meal's own
+      // item names (real data only, no fabricated recipe titles/sites). Uses
+      // a real <a> (not a button) since it navigates away/opens a new tab --
+      // same target="_blank" rel="noopener" convention as the external
+      // data-source links in getFreeFoodDataSources()'s rendering below, and
+      // reuses that same "plain .food-meta text, accent-colored to read as
+      // a link" visual language (see completedTodayHtml above for the same
+      // .food-meta-plus-accent-color technique) rather than that section's
+      // full food-row card treatment, since this sits inline in a meal card
+      // next to a button rather than in its own list.
+      var recipeQuery = meal.items.map(function (it) { return it.name; }).join(" ") + " recipe";
+      var recipeUrl = "https://www.google.com/search?q=" + encodeURIComponent(recipeQuery);
       return (
         '<div class="card" style="margin-bottom:10px;">' +
           '<h2 style="margin-bottom:6px;">' + meal.emoji + ' ' + escapeHtml(meal.slot) + '</h2>' +
           (itemsHtml || '<div class="empty">No items generated for this meal.</div>') +
           '<p class="food-meta" style="margin:8px 0 10px;">Meal total: ' + fmt(meal.mealTotals.calories) + ' kcal · ' + fmt(meal.mealTotals.protein) + 'g protein</p>' +
           '<button class="secondary coach-log-meal-btn" type="button" data-meal-idx="' + idx + '">Log This Meal</button>' +
+          '<a class="food-meta" href="' + escapeHtml(recipeUrl) + '" target="_blank" rel="noopener" style="display:block; text-align:center; margin-top:8px; color:var(--accent);">🔗 Find a recipe</a>' +
         '</div>'
       );
     }).join("");
@@ -4792,6 +4813,13 @@
       return names.length ? names.join(", ") : "None";
     }
 
+    // Only rendered when there's actually a previous plan to go back to --
+    // same conditional-string-then-concatenate pattern renderCoachMissingNutrients()
+    // already uses for its optional supplementHtml piece.
+    var backToPreviousBtnHtml = coachPreviousMealPlan
+      ? '<button class="secondary" id="coachBackToPreviousPlanBtn" type="button">↩ Back to Previous Plan</button>'
+      : '';
+
     container.innerHTML =
       mealsHtml +
       '<div class="card">' +
@@ -4800,6 +4828,7 @@
         '<p class="food-meta" style="margin-top:6px;"><strong>Covered:</strong> ' + escapeHtml(keysToNames(plan.nutrientsCovered)) + '</p>' +
         '<p class="food-meta" style="margin-top:4px;"><strong>Still short:</strong> ' + escapeHtml(keysToNames(plan.nutrientsStillShort)) + '</p>' +
         '<div class="modal-actions" style="margin-top:10px;">' +
+          backToPreviousBtnHtml +
           '<button class="secondary" id="coachRegeneratePlanBtn" type="button">Regenerate Plan</button>' +
           '<button class="primary" id="coachSavePlanBtn" type="button">Save This Plan</button>' +
         '</div>' +
@@ -4816,6 +4845,7 @@
       });
     });
     document.getElementById("coachRegeneratePlanBtn").addEventListener("click", function () {
+      coachPreviousMealPlan = coachCurrentMealPlan;
       coachCurrentMealPlan = generateMealPlan(todayKey());
       renderMealPlanResult(coachCurrentMealPlan);
       showToast("Meal plan regenerated");
@@ -4824,6 +4854,17 @@
       localStorage.setItem(STORAGE_MEALPLAN, JSON.stringify(coachCurrentMealPlan));
       showToast("Meal plan saved");
     });
+    // Only present when backToPreviousBtnHtml actually rendered it above.
+    var backToPreviousBtn = document.getElementById("coachBackToPreviousPlanBtn");
+    if (backToPreviousBtn) {
+      backToPreviousBtn.addEventListener("click", function () {
+        var temp = coachCurrentMealPlan;
+        coachCurrentMealPlan = coachPreviousMealPlan;
+        coachPreviousMealPlan = temp;
+        renderMealPlanResult(coachCurrentMealPlan);
+        showToast("Back to previous plan");
+      });
+    }
   }
 
   document.getElementById("coachGenerateMealPlanBtn").addEventListener("click", function () {
@@ -4834,6 +4875,7 @@
     // artificial delay just makes the "Generating…" state visibly register
     // as a real loading step rather than flashing for one frame.
     setTimeout(function () {
+      coachPreviousMealPlan = coachCurrentMealPlan;
       coachCurrentMealPlan = generateMealPlan(todayKey());
       renderMealPlanResult(coachCurrentMealPlan);
       btn.disabled = false;
