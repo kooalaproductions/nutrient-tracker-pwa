@@ -499,7 +499,7 @@
      widening the shared rule everywhere it's used). */
   #coachGenerateMealPlanBtn, #coachRegeneratePlanBtn, #coachSavePlanBtn,
   #coachBackToPreviousPlanBtn,
-  .coach-log-meal-btn, #coachCheckinSaveBtn, #coachCompleteProfileBtn,
+  .coach-log-meal-btn, .coach-regen-slot-btn, #coachCheckinSaveBtn, #coachCompleteProfileBtn,
   .coach-suggestion-row, .coach-supplement-suggestion, #coachDataQualityContent .food-row {
     min-height: 44px;
   }
@@ -2425,38 +2425,24 @@
     return slots;
   }
 
-  // Builds a full day's meal plan. Meal/snack count + calorieDistribution
-  // come from the PRIMARY active goal's suggestedMealStructure ("first
-  // selected = primary" -- see getUserTDEE()'s comment; when multiple goals
-  // are active this is both "the first one" and "the most conservative one"
-  // in practice, since goals.json's structures only vary between the
-  // standard 3-meal/1-snack layout and muscle_gain's more elaborate
-  // 4-meal/2-snack layout -- picking "first selected" rather than always
-  // preferring the simpler structure keeps this one rule instead of two).
+  // Builds one meal slot's items (protein pick, produce pick, filler pick).
+  // Extracted out of generateMealPlan() so both generateMealPlan() and
+  // regenerateMealSlot() (single-slot regeneration) can share the exact same
+  // picking logic instead of drifting apart. usageCounts is shared/mutated
+  // by the caller across every slot it builds in one pass (the "no single
+  // food used in more than 2 slots total across the whole plan" rule).
   //
-  // Per slot: (1) a highProtein-flagged food sized to ~35% of the slot's
-  // calorie budget, scored by how many of today's top-3 missing nutrients it
-  // has real data for; (2) a fruit/vegetable item for micronutrient gaps,
-  // same scoring, skipped if it doesn't fit the remaining budget and the
-  // slot already has an item; (3) a grain/dairy/fat/snack "filler" sized to
-  // use up whatever calorie budget remains. No single food is used in more
-  // than 2 slots total across the whole plan (usageCounts, shared/mutated
-  // across all slots since Array.map runs its callback in index order).
-  function generateMealPlan(dateString) {
-    var targets = getDailyTargets();
-    var missing = getMissingNutrients(dateString);
-    var topMissingKeys = missing.slice(0, 3).map(function (m) { return m.key; });
-
-    var activeGoalIds = getActiveGoals();
-    var primaryGoal = (state.goalProfiles || []).filter(function (g) { return g.id === activeGoalIds[0]; })[0];
-    var structure = (primaryGoal && primaryGoal.suggestedMealStructure) ||
-      { meals: 3, snacks: 1, calorieDistribution: [0.30, 0.35, 0.25, 0.10] };
-
-    var slotDefs = buildMealSlots(structure);
-    var distribution = structure.calorieDistribution || [];
-    var targetCalories = targets.calories || 2000; // safety fallback: incomplete profile -> getDailyTargets().calories is null
-
-    var usageCounts = {};
+  // avoidFoodIds (optional Set of food ids): lets a caller deprioritize --
+  // NOT exclude outright -- specific foods for this slot. pickFood() tries
+  // candidates outside avoidFoodIds first, and only falls back to an
+  // avoided candidate if that filtered list comes up empty for a given
+  // predicate (i.e. avoidFoodIds genuinely has no other real candidate).
+  // This is what lets regenerateMealSlot() actually change a slot instead of
+  // deterministically reproducing the same picks (see regenerateMealSlot()'s
+  // comment for why plain determinism reads as broken on "Regenerate Plan").
+  function buildMealSlotItems(slotDef, slotBudget, usageCounts, topMissingKeys, avoidFoodIds) {
+    var items = [];
+    var remainingBudget = slotBudget;
 
     function missingCoverageScore(food) {
       var score = 0;
@@ -2471,6 +2457,10 @@
         return (usageCounts[f.id] || 0) < 2 && predicate(f);
       });
       candidates.sort(function (a, b) { return scoreFn(b) - scoreFn(a); });
+      if (avoidFoodIds && avoidFoodIds.size) {
+        var fresh = candidates.filter(function (f) { return !avoidFoodIds.has(f.id); });
+        if (fresh.length) return fresh[0];
+      }
       return candidates[0] || null;
     }
 
@@ -2487,49 +2477,88 @@
       };
     }
 
+    var proteinFood = pickFood(function (f) { return (f.flags || []).indexOf("highProtein") !== -1; }, missingCoverageScore);
+    if (proteinFood && proteinFood.calories > 0) {
+      var proteinServings = Math.max(0.5, Math.round(((remainingBudget * 0.35) / proteinFood.calories) * 2) / 2);
+      var proteinItem = itemFromFood(proteinFood, proteinServings);
+      items.push(proteinItem);
+      remainingBudget -= proteinItem.calories;
+    }
+
+    var produceFood = pickFood(function (f) { return f.category === "fruit" || f.category === "vegetable"; }, missingCoverageScore);
+    if (produceFood) {
+      var produceItem = itemFromFood(produceFood, 1);
+      if (produceItem.calories <= remainingBudget || items.length === 0) {
+        items.push(produceItem);
+        remainingBudget -= produceItem.calories;
+      } else {
+        usageCounts[produceFood.id] -= 1; // didn't fit and wasn't the only item -- release the usage slot
+      }
+    }
+
+    if (remainingBudget > 30) {
+      var fillerFood = pickFood(
+        function (f) { return ["grain", "dairy", "fat", "snack"].indexOf(f.category) !== -1; },
+        function (f) { return -Math.abs(f.calories - remainingBudget); }
+      );
+      if (fillerFood && fillerFood.calories > 0) {
+        var fillerServings = Math.max(0.5, Math.round((remainingBudget / fillerFood.calories) * 2) / 2);
+        var fillerItem = itemFromFood(fillerFood, fillerServings);
+        items.push(fillerItem);
+        remainingBudget -= fillerItem.calories;
+      }
+    }
+
+    var mealTotals = items.reduce(function (acc, it) {
+      acc.calories += it.calories; acc.protein += it.protein; acc.carbs += it.carbs; acc.fat += it.fat;
+      return acc;
+    }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
+
+    return { slot: slotDef.name, emoji: slotDef.emoji, targetCalories: slotBudget, items: items, mealTotals: mealTotals };
+  }
+
+  // Builds a full day's meal plan. Meal/snack count + calorieDistribution
+  // come from the PRIMARY active goal's suggestedMealStructure ("first
+  // selected = primary" -- see getUserTDEE()'s comment; when multiple goals
+  // are active this is both "the first one" and "the most conservative one"
+  // in practice, since goals.json's structures only vary between the
+  // standard 3-meal/1-snack layout and muscle_gain's more elaborate
+  // 4-meal/2-snack layout -- picking "first selected" rather than always
+  // preferring the simpler structure keeps this one rule instead of two).
+  //
+  // Per slot: (1) a highProtein-flagged food sized to ~35% of the slot's
+  // calorie budget, scored by how many of today's top-3 missing nutrients it
+  // has real data for; (2) a fruit/vegetable item for micronutrient gaps,
+  // same scoring, skipped if it doesn't fit the remaining budget and the
+  // slot already has an item; (3) a grain/dairy/fat/snack "filler" sized to
+  // use up whatever calorie budget remains. No single food is used in more
+  // than 2 slots total across the whole plan (usageCounts, shared/mutated
+  // across all slots since Array.map runs its callback in index order). See
+  // buildMealSlotItems() above for the actual per-slot picking logic.
+  //
+  // avoidFoodIds (optional Set of food ids): passed through to every slot's
+  // buildMealSlotItems() call so a caller (regenerateMealSlot()) can ask for
+  // a plan that avoids specific foods. Omitted/undefined for a normal full
+  // plan generation -- existing 1-arg call sites are unaffected.
+  function generateMealPlan(dateString, avoidFoodIds) {
+    var targets = getDailyTargets();
+    var missing = getMissingNutrients(dateString);
+    var topMissingKeys = missing.slice(0, 3).map(function (m) { return m.key; });
+
+    var activeGoalIds = getActiveGoals();
+    var primaryGoal = (state.goalProfiles || []).filter(function (g) { return g.id === activeGoalIds[0]; })[0];
+    var structure = (primaryGoal && primaryGoal.suggestedMealStructure) ||
+      { meals: 3, snacks: 1, calorieDistribution: [0.30, 0.35, 0.25, 0.10] };
+
+    var slotDefs = buildMealSlots(structure);
+    var distribution = structure.calorieDistribution || [];
+    var targetCalories = targets.calories || 2000; // safety fallback: incomplete profile -> getDailyTargets().calories is null
+
+    var usageCounts = {};
+
     var meals = slotDefs.map(function (slotDef, i) {
       var slotBudget = Math.round(targetCalories * (distribution[i] != null ? distribution[i] : (1 / slotDefs.length)));
-      var items = [];
-      var remainingBudget = slotBudget;
-
-      var proteinFood = pickFood(function (f) { return (f.flags || []).indexOf("highProtein") !== -1; }, missingCoverageScore);
-      if (proteinFood && proteinFood.calories > 0) {
-        var proteinServings = Math.max(0.5, Math.round(((remainingBudget * 0.35) / proteinFood.calories) * 2) / 2);
-        var proteinItem = itemFromFood(proteinFood, proteinServings);
-        items.push(proteinItem);
-        remainingBudget -= proteinItem.calories;
-      }
-
-      var produceFood = pickFood(function (f) { return f.category === "fruit" || f.category === "vegetable"; }, missingCoverageScore);
-      if (produceFood) {
-        var produceItem = itemFromFood(produceFood, 1);
-        if (produceItem.calories <= remainingBudget || items.length === 0) {
-          items.push(produceItem);
-          remainingBudget -= produceItem.calories;
-        } else {
-          usageCounts[produceFood.id] -= 1; // didn't fit and wasn't the only item -- release the usage slot
-        }
-      }
-
-      if (remainingBudget > 30) {
-        var fillerFood = pickFood(
-          function (f) { return ["grain", "dairy", "fat", "snack"].indexOf(f.category) !== -1; },
-          function (f) { return -Math.abs(f.calories - remainingBudget); }
-        );
-        if (fillerFood && fillerFood.calories > 0) {
-          var fillerServings = Math.max(0.5, Math.round((remainingBudget / fillerFood.calories) * 2) / 2);
-          var fillerItem = itemFromFood(fillerFood, fillerServings);
-          items.push(fillerItem);
-          remainingBudget -= fillerItem.calories;
-        }
-      }
-
-      var mealTotals = items.reduce(function (acc, it) {
-        acc.calories += it.calories; acc.protein += it.protein; acc.carbs += it.carbs; acc.fat += it.fat;
-        return acc;
-      }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
-
-      return { slot: slotDef.name, emoji: slotDef.emoji, targetCalories: slotBudget, items: items, mealTotals: mealTotals };
+      return buildMealSlotItems(slotDef, slotBudget, usageCounts, topMissingKeys, avoidFoodIds);
     });
 
     var planTotals = meals.reduce(function (acc, m) {
@@ -2556,6 +2585,82 @@
       generatedAt: new Date().toISOString(),
       targetCalories: targetCalories,
       meals: meals,
+      planTotals: planTotals,
+      nutrientsCovered: nutrientsCovered,
+      nutrientsStillShort: nutrientsStillShort
+    };
+  }
+
+  // Regenerates ONLY one meal slot (slotIndex) in an existing plan, leaving
+  // every other slot's items untouched. This is the fix for "Regenerate
+  // Plan" reproducing an identical plan when nothing else changed --
+  // generateMealPlan()'s per-slot picking is fully deterministic (same
+  // inputs -> same top-ranked candidate), which is correct/intentional for
+  // scoring quality but reads as broken for a single-slot "shuffle this
+  // meal" action. The fix here is exclusion-awareness, not randomization:
+  // this slot's OWN current items are passed to buildMealSlotItems() as
+  // avoidFoodIds so pickFood() prefers a fresh candidate, falling back to a
+  // repeat only when a slot genuinely has no other real candidate.
+  //
+  // Mirrors generateMealPlan()'s own tail logic (planTotals/nutrientsCovered/
+  // nutrientsStillShort) exactly, since the two functions' outputs must
+  // agree in shape.
+  function regenerateMealSlot(dateString, plan, slotIndex) {
+    if (!plan || !plan.meals || !plan.meals[slotIndex]) return plan;
+
+    var targets = getDailyTargets();
+    var missing = getMissingNutrients(dateString);
+    var topMissingKeys = missing.slice(0, 3).map(function (m) { return m.key; });
+
+    var activeGoalIds = getActiveGoals();
+    var primaryGoal = (state.goalProfiles || []).filter(function (g) { return g.id === activeGoalIds[0]; })[0];
+    var structure = (primaryGoal && primaryGoal.suggestedMealStructure) ||
+      { meals: 3, snacks: 1, calorieDistribution: [0.30, 0.35, 0.25, 0.10] };
+    var slotDefs = buildMealSlots(structure);
+    var distribution = structure.calorieDistribution || [];
+    var targetCalories = targets.calories || 2000;
+    var slotBudget = Math.round(targetCalories * (distribution[slotIndex] != null ? distribution[slotIndex] : (1 / slotDefs.length)));
+
+    // usageCounts seeded from every OTHER slot's current items (so the new
+    // slot's picks still respect "max 2 uses across the whole plan" relative
+    // to what's fixed).
+    var usageCounts = {};
+    plan.meals.forEach(function (m, i) {
+      if (i === slotIndex) return;
+      m.items.forEach(function (it) { usageCounts[it.foodId] = (usageCounts[it.foodId] || 0) + 1; });
+    });
+
+    // Deprioritize this slot's OWN current items so regenerating it actually
+    // changes it.
+    var avoidFoodIds = new Set(plan.meals[slotIndex].items.map(function (it) { return it.foodId; }));
+
+    var newSlot = buildMealSlotItems(slotDefs[slotIndex] || plan.meals[slotIndex], slotBudget, usageCounts, topMissingKeys, avoidFoodIds);
+
+    var newMeals = plan.meals.slice();
+    newMeals[slotIndex] = newSlot;
+
+    var planTotals = newMeals.reduce(function (acc, m) {
+      acc.calories += m.mealTotals.calories; acc.protein += m.mealTotals.protein;
+      acc.carbs += m.mealTotals.carbs; acc.fat += m.mealTotals.fat;
+      return acc;
+    }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
+
+    var plannedFoodIds = {};
+    newMeals.forEach(function (m) { m.items.forEach(function (it) { plannedFoodIds[it.foodId] = true; }); });
+    var nutrientsCovered = [];
+    var nutrientsStillShort = [];
+    missing.forEach(function (m) {
+      var covered = Object.keys(plannedFoodIds).some(function (id) {
+        var f = allFoods().filter(function (x) { return x.id === id; })[0];
+        return f && f[m.key] != null && Number(f[m.key]) > 0;
+      });
+      (covered ? nutrientsCovered : nutrientsStillShort).push(m.key);
+    });
+
+    return {
+      generatedAt: new Date().toISOString(),
+      targetCalories: plan.targetCalories,
+      meals: newMeals,
       planTotals: planTotals,
       nutrientsCovered: nutrientsCovered,
       nutrientsStillShort: nutrientsStillShort
@@ -4802,7 +4907,10 @@
           '<h2 style="margin-bottom:6px;">' + meal.emoji + ' ' + escapeHtml(meal.slot) + '</h2>' +
           (itemsHtml || '<div class="empty">No items generated for this meal.</div>') +
           '<p class="food-meta" style="margin:8px 0 10px;">Meal total: ' + fmt(meal.mealTotals.calories) + ' kcal · ' + fmt(meal.mealTotals.protein) + 'g protein</p>' +
-          '<button class="secondary coach-log-meal-btn" type="button" data-meal-idx="' + idx + '">Log This Meal</button>' +
+          '<div class="modal-actions">' +
+            '<button class="secondary coach-log-meal-btn" type="button" data-meal-idx="' + idx + '">Log This Meal</button>' +
+            '<button class="secondary coach-regen-slot-btn" type="button" data-meal-idx="' + idx + '">🔄 New ' + escapeHtml(meal.slot) + '</button>' +
+          '</div>' +
           '<a class="food-meta" href="' + escapeHtml(recipeUrl) + '" target="_blank" rel="noopener" style="display:block; text-align:center; margin-top:8px; color:var(--accent);">🔗 Find a recipe</a>' +
         '</div>'
       );
@@ -4844,9 +4952,26 @@
         renderCoachInsights();
       });
     });
+    container.querySelectorAll(".coach-regen-slot-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var idx = Number(btn.getAttribute("data-meal-idx"));
+        coachPreviousMealPlan = coachCurrentMealPlan;
+        coachCurrentMealPlan = regenerateMealSlot(todayKey(), coachCurrentMealPlan, idx);
+        renderMealPlanResult(coachCurrentMealPlan);
+        showToast("🔄 New " + coachCurrentMealPlan.meals[idx].slot + " generated");
+      });
+    });
     document.getElementById("coachRegeneratePlanBtn").addEventListener("click", function () {
+      // Avoid-set of every food id already in the current plan so a whole-
+      // plan "Regenerate" actually favors different picks instead of
+      // generateMealPlan()'s deterministic per-slot scoring just reproducing
+      // the identical plan (see generateMealPlan()'s avoidFoodIds comment).
+      var avoidFoodIds = new Set();
+      coachCurrentMealPlan.meals.forEach(function (m) {
+        m.items.forEach(function (it) { avoidFoodIds.add(it.foodId); });
+      });
       coachPreviousMealPlan = coachCurrentMealPlan;
-      coachCurrentMealPlan = generateMealPlan(todayKey());
+      coachCurrentMealPlan = generateMealPlan(todayKey(), avoidFoodIds);
       renderMealPlanResult(coachCurrentMealPlan);
       showToast("Meal plan regenerated");
     });
@@ -4875,8 +5000,20 @@
     // artificial delay just makes the "Generating…" state visibly register
     // as a real loading step rather than flashing for one frame.
     setTimeout(function () {
+      // Same avoid-set treatment as #coachRegeneratePlanBtn above -- this
+      // button can also be clicked again after a plan already exists, and
+      // should vary the result just like an explicit regenerate. Only built
+      // when there's an existing plan to avoid; the very first generate has
+      // nothing to avoid yet.
+      var avoidFoodIds;
+      if (coachCurrentMealPlan) {
+        avoidFoodIds = new Set();
+        coachCurrentMealPlan.meals.forEach(function (m) {
+          m.items.forEach(function (it) { avoidFoodIds.add(it.foodId); });
+        });
+      }
       coachPreviousMealPlan = coachCurrentMealPlan;
-      coachCurrentMealPlan = generateMealPlan(todayKey());
+      coachCurrentMealPlan = generateMealPlan(todayKey(), avoidFoodIds);
       renderMealPlanResult(coachCurrentMealPlan);
       btn.disabled = false;
       btn.textContent = "Generate My Meal Plan";
