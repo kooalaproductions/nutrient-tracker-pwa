@@ -403,6 +403,31 @@ These agents live in `.claude/agents/` and are auto-available every session.
       Fixed by adding the identical badge to microNoDataRowHtml() too;
       re-tested live and confirmed on Pantothenic Acid/Biotin/Choline/
       Vitamin K. Other 4 fixes confirmed working as built.)
+- [x] index.html — merged food/supplement logging into one Log-tab
+      section (2026-08-14)
+      (bottom nav is now 3 tabs — Log/Micros/Coach — down from 4;
+      the Supplements tab and #supplementsView no longer exist. Ran a
+      ui-builder consultation first (review-only, no edits) on whether
+      to combine them; the recommendation was a PARTIAL merge — share
+      the search step only, not the list rendering — since the
+      "Logged today" results list already merged both types cleanly
+      and the real redundancy was two separate search boxes/nav
+      destinations, not the results. Built as: a "Log an item" card
+      with a Food/Supplement toggle (logMode, switchLogMode()) over
+      one shared #itemSearchInput, swapping which of two always-
+      present containers (#foodList/#supplementList) is visible —
+      each list's own rendering/category-grouping logic (foods flat,
+      supplements grouped by Vitamins/Minerals/etc) is completely
+      unchanged, only their search-input source changed. Also fixed a
+      real dead affordance caught during the consult: "Today's
+      supplements"' empty state said "tap 💊 to add" but had no click
+      handler at all; it's now a real button that switches to
+      Supplement mode and focuses/scrolls to the search box.
+      openLogModal()/openSupplementModal() and all existing call
+      sites (including Coach's own supplement suggestions) are
+      unaffected — this only changed how the lists are reached, not
+      what tapping a result does. qa-reviewer targeted audit: PASS,
+      no findings.)
 
 ### 🔲 Pending (priority order)
 - [ ] iPhone home screen install + real device test
