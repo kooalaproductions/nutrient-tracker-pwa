@@ -446,6 +446,22 @@ These agents live in `.claude/agents/` and are auto-available every session.
       itemSearchInput/renderFoodList()/renderSupplementList()
       internals completely unchanged — only the container's page
       location moved.)
+- [x] index.html — moved "Add a custom food" (+ barcode scanner) to
+      the ➕ Add tab too (2026-08-14, same-day follow-on)
+      (completes decluttering the Log tab per the user's request --
+      it's now purely Today's totals/Micronutrients summary/Today's
+      supplements/Logged today/History/Backup & restore, with every
+      "search, browse, or define something to log" flow (existing
+      foods, supplements, AND custom foods/barcode scanning) living
+      in #addItemView. Caught and fixed a real dependency the move
+      would have silently broken: switchView()'s barcode camera-
+      release guard assumed scanning only ever happened on the Log
+      tab (`viewId !== "logView"` triggered releasing the camera on
+      navigating away) -- now correctly checks
+      `viewId !== "addItemView"`, so leaving the Add tab (not the Log
+      tab) is what releases the camera. No custom-food-saving, form-
+      validation, or barcode-scanning logic touched -- pure markup
+      relocation plus the one required guard fix.)
 
 ### 🔲 Pending (priority order)
 - [ ] iPhone home screen install + real device test
