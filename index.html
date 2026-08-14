@@ -569,17 +569,6 @@
   </section>
 
   <section class="card">
-    <h2>Log an item</h2>
-    <div style="display:flex; gap:8px; margin-bottom:10px;">
-      <button class="primary" id="logModeFoodBtn" type="button" style="flex:1; width:auto;">🥗 Food</button>
-      <button class="secondary" id="logModeSupplementBtn" type="button" style="flex:1; width:auto;">💊 Supplement</button>
-    </div>
-    <input type="text" id="itemSearchInput" class="search-input" placeholder="Search foods…" autocomplete="off" />
-    <div class="food-list" id="foodList"></div>
-    <div id="supplementList" style="display:none;"></div>
-  </section>
-
-  <section class="card">
     <div class="toggle-row" id="addFoodToggle">
       <h2 style="margin:0;">Add a custom food</h2>
       <span class="chevron">▾</span>
@@ -748,11 +737,29 @@
 
   </div>
 
+  <div id="addItemView" style="display:none">
+
+  <section class="card">
+    <h2>Log an item</h2>
+    <div style="display:flex; gap:8px; margin-bottom:10px;">
+      <button class="primary" id="logModeFoodBtn" type="button" style="flex:1; width:auto;">🥗 Food</button>
+      <button class="secondary" id="logModeSupplementBtn" type="button" style="flex:1; width:auto;">💊 Supplement</button>
+    </div>
+    <input type="text" id="itemSearchInput" class="search-input" placeholder="Search foods…" autocomplete="off" />
+    <div class="food-list" id="foodList"></div>
+    <div id="supplementList" style="display:none;"></div>
+  </section>
+
+  </div>
+
 </main>
 
 <nav class="bottom-nav" id="bottomNav">
   <button class="nav-btn active" id="navLogBtn" data-view="logView" type="button">
     <span class="nav-icon">📋</span><span>Log</span>
+  </button>
+  <button class="nav-btn" id="navAddItemBtn" data-view="addItemView" type="button">
+    <span class="nav-icon">➕</span><span>Add</span>
   </button>
   <button class="nav-btn" id="navMicroBtn" data-view="microView" type="button">
     <span class="nav-icon">🧬</span><span>Micros</span>
@@ -3565,12 +3572,16 @@
     var items = getDailySupplementSummary();
     if (items.length === 0) {
       container.innerHTML = '<button type="button" class="empty-action-btn" id="supplementSummaryAddBtn">No supplements logged today — tap 💊 to add</button>';
-      // switchLogMode()/itemSearchInput are declared further down this file
-      // (near the search wiring), but as `function`/top-level `var`
-      // declarations they're hoisted/assigned well before this handler can
-      // ever actually fire (same reasoning as microRowHtml()'s
-      // switchView() call above and this file's other forward references).
+      // switchView()/switchLogMode()/itemSearchInput are declared further
+      // down this file (near the bottom-nav / search wiring), but as
+      // `function`/top-level `var` declarations they're hoisted/assigned
+      // well before this handler can ever actually fire (same reasoning as
+      // microRowHtml()'s switchView() call and this file's other forward
+      // references). The "Log an item" card now lives on its own
+      // #addItemView tab (not scrolled-to within the same page), so this
+      // switches tabs FIRST, then sets the mode, then focuses the input.
       document.getElementById("supplementSummaryAddBtn").addEventListener("click", function () {
+        switchView("addItemView");
         switchLogMode("supplement");
         itemSearchInput.focus();
         itemSearchInput.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -5180,6 +5191,7 @@
       closeBarcodeModal();
     }
     document.getElementById("logView").style.display = viewId === "logView" ? "" : "none";
+    document.getElementById("addItemView").style.display = viewId === "addItemView" ? "" : "none";
     document.getElementById("microView").style.display = viewId === "microView" ? "" : "none";
     document.getElementById("coachView").style.display = viewId === "coachView" ? "" : "none";
     navButtons.forEach(function (btn) {
