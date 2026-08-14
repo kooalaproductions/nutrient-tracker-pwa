@@ -316,7 +316,26 @@ These agents live in `.claude/agents/` and are auto-available every session.
       targeted audit: PASS, no findings — UL math hand-verified against
       real data (magnesium's only product, 500mg, correctly blocked
       against the 350mg supplement-only UL; folate's 680mcg projected
-      dose correctly allowed under the 1000mcg UL).)
+      dose correctly allowed under the 1000mcg UL).
+      2026-08-13 (same day, second pass): fixed two real usability gaps
+      caught by user testing. (1) Coach's Complete Your Nutrients card
+      wasn't live-refreshing — addLogEntry()/logSupplement()/
+      logMealPlanItems() re-render six other views on every log action
+      but were never wired to refresh the Coach tab too, so logging a
+      suggested item required switching tabs away and back to see it
+      reflected; fixed with the same guarded
+      `if (coachView visible) renderCoachView()` pattern already used
+      in 3 other places in the file. CRITICAL-risk (addLogEntry/
+      logSupplement are named explicitly in this project's risk
+      classification) — paused for user confirmation before build and
+      reviewed as an exact 3-line diff before commit; qa-reviewer
+      targeted audit: PASS. (2) Nutrients silently vanished from the
+      list the moment they hit 90% with no acknowledgment — user chose
+      a persistent "✅ Completed today: X, Y, Z" summary line (over a
+      transient checkmark or leaving it as-is) via
+      getCompletedNutrientsToday(), shown in both the empty and
+      non-empty list states, omitted entirely when nothing's been
+      completed yet.)
 
 ### 🔲 Pending (priority order)
 - [ ] iPhone home screen install + real device test
