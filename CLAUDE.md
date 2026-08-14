@@ -335,7 +335,19 @@ These agents live in `.claude/agents/` and are auto-available every session.
       transient checkmark or leaving it as-is) via
       getCompletedNutrientsToday(), shown in both the empty and
       non-empty list states, omitted entirely when nothing's been
-      completed yet.)
+      completed yet.
+      2026-08-13 (third pass): meal plan gets a session-only undo --
+      Regenerate/Generate-again now stash the outgoing plan in
+      coachPreviousMealPlan before overwriting coachCurrentMealPlan; a
+      "↩ Back to Previous Plan" button appears once there's actually a
+      previous plan (never on the very first generate) and swaps the
+      two, so clicking it twice returns you to where you started.
+      Each meal card also got a "🔗 Find a recipe" link -- a plain web
+      search built from that meal's real item names, opened in a new
+      tab. Deliberately NOT a recipe database or API call: this app is
+      backend-less and offline-first by design, so a search link was
+      recommended over either a large low-coverage static recipe
+      dataset or an external API dependency, and the user agreed.)
 
 ### 🔲 Pending (priority order)
 - [ ] iPhone home screen install + real device test
