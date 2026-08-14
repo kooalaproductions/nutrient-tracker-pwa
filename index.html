@@ -294,6 +294,45 @@
   .recent-day-chip .rd-date { font-size: 11px; color: var(--text-secondary); }
   .recent-day-chip .rd-cal { font-size: 13px; font-weight: 700; color: var(--accent); margin-top: 2px; }
 
+  /* Weekly Overview chart (analyticsView, renderWeeklyOverview() /
+     getWeeklyMacroSummary()). Plain-div height-percentage bars, same visual
+     language as .stat-bar-track/.stat-bar-fill above -- this app has never
+     used inline SVG or a charting library and shouldn't start here. Two
+     separate charts (calories vs. macro grams) since they're different
+     units/scales and must never share one axis/scale. */
+  .wk-chart-row { display: flex; align-items: stretch; gap: 4px; height: 108px; margin: 4px 0 14px; }
+  .wk-col {
+    flex: 1; min-width: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-end; height: 100%;
+  }
+  /* Today's column -- reuses .cal-day.today's inset-accent-ring technique
+     rather than inventing new "today" styling. */
+  .wk-col.today { box-shadow: inset 0 0 0 1.5px var(--accent); border-radius: 6px; }
+  .wk-col-value { font-size: 10px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; margin-bottom: 2px; }
+  .wk-bar-area { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+  .wk-bar { width: 60%; min-height: 2px; border-radius: 3px 3px 0 0; }
+  /* logged:false day -- a muted baseline tick, never a colored zero-height
+     bar (that would be indistinguishable from a real logged zero). */
+  .wk-nodata-tick { width: 60%; height: 2px; background: var(--border); border-radius: 2px; }
+  .wk-bar-area.wk-macro-bars { gap: 3px; }
+  .wk-macro-bar { width: 6px; min-height: 2px; border-radius: 2px 2px 0 0; }
+  .wk-macro-tick { width: 6px; height: 2px; background: var(--border); border-radius: 2px; }
+  .wk-col-day { font-size: 10.5px; color: var(--text-secondary); margin-top: 4px; }
+  .wk-col.today .wk-col-day { color: var(--accent); font-weight: 700; }
+  /* Mandatory legend for the 3-series macro chart -- required by this app's
+     own >=2-series convention, and doubly so since these nutrient colors
+     read low-contrast in isolation; identity must never depend on color
+     alone. */
+  .wk-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11.5px; color: var(--text-secondary); margin: 2px 0 6px; }
+  .wk-legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+  /* Table fallback (mandatory) -- lives inside the existing <details>/
+     <summary> collapsible pattern (.micro-contributors, see microRowHtml()). */
+  .wk-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 4px; }
+  .wk-table th, .wk-table td { padding: 6px 4px; text-align: right; border-bottom: 1px solid var(--border); }
+  .wk-table th:first-child, .wk-table td:first-child { text-align: left; }
+  .wk-table th { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+  .wk-table tr:last-child td { border-bottom: none; }
+
   .backup-actions { display: flex; gap: 10px; }
   .backup-actions button { flex: 1; }
 
@@ -740,6 +779,37 @@
   </div>
 
   <div id="analyticsView" style="display:none">
+
+  <section class="card">
+    <h2>📈 Weekly Overview</h2>
+    <p class="food-meta" style="margin-top:-6px; margin-bottom:10px;">Last 7 days</p>
+
+    <div class="supplement-cat-header">CALORIES</div>
+    <div class="wk-chart-row" id="wkCalorieChart"></div>
+
+    <div class="supplement-cat-header">MACROS (G)</div>
+    <div class="wk-legend">
+      <span><span class="wk-legend-dot" style="background:var(--nutrient-protein);"></span>Protein</span>
+      <span><span class="wk-legend-dot" style="background:var(--nutrient-carbs);"></span>Carbs</span>
+      <span><span class="wk-legend-dot" style="background:var(--nutrient-fat);"></span>Fat</span>
+    </div>
+    <div class="wk-chart-row" id="wkMacroChart"></div>
+
+    <details class="micro-contributors">
+      <summary class="micro-contributors-toggle">
+        <span>Show as table</span>
+        <span class="chevron">▾</span>
+      </summary>
+      <div style="overflow-x:auto;">
+        <table class="wk-table">
+          <thead>
+            <tr><th>Date</th><th>Calories</th><th>Protein (g)</th><th>Carbs (g)</th><th>Fat (g)</th></tr>
+          </thead>
+          <tbody id="wkTableBody"></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
 
   <section class="card">
     <div class="cal-header">
@@ -4087,6 +4157,95 @@
     return days;
   }
 
+  // ---------- Weekly Overview chart (analyticsView) ----------
+  // Renders getWeeklyMacroSummary()'s 7-day array as two plain-div bar
+  // charts (calories, then macros in grams -- kept as two separate charts
+  // since they don't share a unit/scale) plus a table fallback. No render
+  // hook anywhere else in this file ever calls getWeeklyMacroSummary(), so
+  // switchView() calls this fresh on every arrival at #analyticsView (see
+  // below), the same way it already does for renderMicroView()/
+  // renderCoachView() -- unlike the History calendar, which renderAll()
+  // already keeps fresh unconditionally.
+  function weekdayLabel(dateKey) {
+    var parts = partsFromKey(dateKey);
+    return new Date(parts.year, parts.month0, parts.day).toLocaleDateString(undefined, { weekday: "short" });
+  }
+
+  function renderWeeklyOverview() {
+    var calChartEl = document.getElementById("wkCalorieChart");
+    if (!calChartEl) return;
+
+    var days = getWeeklyMacroSummary();
+    var todayK = todayKey();
+
+    // Chart 1: calories, scaled to the max calorie value across all 7 days
+    // (there's no goal context here -- getWeeklyMacroSummary() doesn't
+    // provide one). A logged:false day never renders a colored bar (that
+    // would read as "0 calories consumed", indistinguishable from a real
+    // zero) -- it gets a muted baseline tick and a "—" label instead.
+    var maxCal = Math.max.apply(null, days.map(function (d) { return d.calories; })) || 1;
+    calChartEl.innerHTML = days.map(function (d) {
+      var colClass = "wk-col" + (d.date === todayK ? " today" : "");
+      var barHtml;
+      if (!d.logged) {
+        barHtml =
+          '<div class="wk-col-value">—</div>' +
+          '<div class="wk-bar-area"><div class="wk-nodata-tick"></div></div>';
+      } else {
+        var pct = Math.round((d.calories / maxCal) * 100);
+        barHtml =
+          '<div class="wk-col-value">' + fmt(d.calories) + '</div>' +
+          '<div class="wk-bar-area"><div class="wk-bar" style="height:' + pct + '%; background:var(--accent);"></div></div>';
+      }
+      return '<div class="' + colClass + '">' + barHtml + '<div class="wk-col-day">' + weekdayLabel(d.date) + '</div></div>';
+    }).join("");
+
+    // Chart 2: protein/carbs/fat (grams), all 3 series sharing ONE scale --
+    // the max single value across all 21 numbers (7 days x 3 macros) -- so
+    // bar heights are comparable across macros, not just within a day.
+    var allMacroValues = [];
+    days.forEach(function (d) { allMacroValues.push(d.protein, d.carbs, d.fat); });
+    var maxMacro = Math.max.apply(null, allMacroValues) || 1;
+
+    var macroChartEl = document.getElementById("wkMacroChart");
+    macroChartEl.innerHTML = days.map(function (d) {
+      var colClass = "wk-col" + (d.date === todayK ? " today" : "");
+      var barsHtml;
+      if (!d.logged) {
+        // Same muted-dash treatment as Chart 1, applied to all 3 macro slots.
+        barsHtml =
+          '<div class="wk-bar-area wk-macro-bars">' +
+            '<div class="wk-macro-tick"></div><div class="wk-macro-tick"></div><div class="wk-macro-tick"></div>' +
+          '</div>';
+      } else {
+        var pP = Math.round((d.protein / maxMacro) * 100);
+        var pC = Math.round((d.carbs / maxMacro) * 100);
+        var pF = Math.round((d.fat / maxMacro) * 100);
+        barsHtml =
+          '<div class="wk-bar-area wk-macro-bars">' +
+            '<div class="wk-macro-bar" style="height:' + pP + '%; background:var(--nutrient-protein);"></div>' +
+            '<div class="wk-macro-bar" style="height:' + pC + '%; background:var(--nutrient-carbs);"></div>' +
+            '<div class="wk-macro-bar" style="height:' + pF + '%; background:var(--nutrient-fat);"></div>' +
+          '</div>';
+      }
+      return '<div class="' + colClass + '">' + barsHtml + '<div class="wk-col-day">' + weekdayLabel(d.date) + '</div></div>';
+    }).join("");
+
+    // Table fallback (mandatory) -- exact numbers, never colored bars alone.
+    var tableBodyEl = document.getElementById("wkTableBody");
+    tableBodyEl.innerHTML = days.map(function (d) {
+      var parts = partsFromKey(d.date);
+      var dateLabel = new Date(parts.year, parts.month0, parts.day).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      var calText = d.logged ? fmt(d.calories) : "—";
+      var proteinText = d.logged ? fmt(d.protein) : "—";
+      var carbsText = d.logged ? fmt(d.carbs) : "—";
+      var fatText = d.logged ? fmt(d.fat) : "—";
+      return (
+        '<tr><td>' + dateLabel + '</td><td>' + calText + '</td><td>' + proteinText + '</td><td>' + carbsText + '</td><td>' + fatText + '</td></tr>'
+      );
+    }).join("");
+  }
+
   // ---------- export / import backup ----------
   document.getElementById("exportBtn").addEventListener("click", function () {
     exportAllDataAsJSON();
@@ -5210,6 +5369,7 @@
     });
     if (viewId === "microView") renderMicroView();
     if (viewId === "coachView") renderCoachView();
+    if (viewId === "analyticsView") renderWeeklyOverview();
   }
   navButtons.forEach(function (btn) {
     btn.addEventListener("click", function () { switchView(btn.getAttribute("data-view")); });
