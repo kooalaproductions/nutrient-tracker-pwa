@@ -362,7 +362,18 @@ These agents live in `.claude/agents/` and are auto-available every session.
       card now has its own "🔄 New [Slot]" button, and both per-meal
       swaps and whole-plan regenerates go through the same undo stash,
       so "Back to Previous Plan" covers both. qa-reviewer targeted
-      audit of the refactor: PASS, no findings.)
+      audit of the refactor: PASS, no findings.
+      2026-08-13 (fifth pass): added a "Hide Meal Plan"/"Show Meal
+      Plan" toggle so a generated plan can be collapsed without being
+      lost. Deliberately implemented as a plain display toggle on
+      #coachMealPlanResult rather than a <details> wrapper (this
+      app's usual collapsible pattern, used by "Improve Your Data")
+      -- renderMealPlanResult() rewrites that container's innerHTML on
+      every generate/regenerate/per-meal-swap/undo, which would reset
+      a nested <details> open state each time. Since the toggle only
+      touches .style.display and renderMealPlanResult() never does,
+      collapse/expand state survives all four of those actions for
+      free.)
 
 ### 🔲 Pending (priority order)
 - [ ] iPhone home screen install + real device test
