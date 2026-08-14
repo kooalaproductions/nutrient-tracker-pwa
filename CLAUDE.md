@@ -393,7 +393,16 @@ These agents live in `.claude/agents/` and are auto-available every session.
       on first visit; Log tab and Coach tab show overlapping data with
       no visual link tying them together; DV% (supplements) and
       RDA-based percentages are shown side by side with nothing
-      explaining they're roughly the same idea.)
+      explaining they're roughly the same idea.
+      Live-tested all 5 quick wins in-browser: caught and fixed a real
+      gap in the AI badge fix that reading the diff alone missed — it
+      only rendered in microRowHtml() (nutrients with real logged data
+      today), never in the separate microNoDataRowHtml() path that
+      renders the far more common "Not logged today" state, so aiOnly
+      nutrients never showed the badge in practice on a typical day.
+      Fixed by adding the identical badge to microNoDataRowHtml() too;
+      re-tested live and confirmed on Pantothenic Acid/Biotin/Choline/
+      Vitamin K. Other 4 fixes confirmed working as built.)
 
 ### 🔲 Pending (priority order)
 - [ ] iPhone home screen install + real device test
