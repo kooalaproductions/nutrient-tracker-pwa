@@ -373,11 +373,39 @@ These agents live in `.claude/agents/` and are auto-available every session.
       a nested <details> open state each time. Since the toggle only
       touches .style.display and renderMealPlanResult() never does,
       collapse/expand state survives all four of those actions for
-      free.)
+      free.
+      2026-08-14: ran a readability/usability audit via ui-builder
+      (review-only pass, no edits) covering onboarding clarity,
+      navigation/discoverability, terminology consistency, cognitive
+      load, error-proofing, empty states, visual hierarchy, and
+      overall touch-friendliness. Fixed the 5 "quick win" findings:
+      deleting a logged entry now confirms first (previously
+      irreversible on a single mis-tap); the ⭐ priority-nutrient star
+      is now explained inline; the "AI" (Adequate Intake) badge got
+      its own solid-pill style instead of visually reusing the
+      unrelated "custom food" tag's identical outline style; Settings'
+      "Health goals" -> "Coach Focus Areas" and "Goal overrides" ->
+      "Custom Nutrient Targets" (three different Settings concepts no
+      longer all bare-named "Goal(s)"); onboarding now reassures users
+      their data stays on-device. Text/markup/CSS only, no logic
+      touched. 4 "bigger change" findings deferred, need real design
+      thought before building: Coach front-loads everything expanded
+      on first visit; Log tab and Coach tab show overlapping data with
+      no visual link tying them together; DV% (supplements) and
+      RDA-based percentages are shown side by side with nothing
+      explaining they're roughly the same idea.)
 
 ### 🔲 Pending (priority order)
 - [ ] iPhone home screen install + real device test
       (Option C — foundation is solid, needs on-device verify)
+- [ ] Coach tab: collapse sections by default on first visit
+      (currently front-loads everything expanded — overwhelming with
+      sparse/no data logged yet; from the 2026-08-14 readability audit)
+- [ ] Visually tie Log tab's totals/micros cards to Coach's re-derived
+      versions of the same data (currently read as disconnected;
+      2026-08-14 readability audit)
+- [ ] Explain DV% (supplements) vs RDA-based percentages are roughly
+      the same idea (2026-08-14 readability audit)
 - [ ] Weekly macro chart UI
       (getWeeklyMacroSummary() is ready, needs ui-builder pass)
 - [ ] Calcium upper limit age-split correction in rdas.json
