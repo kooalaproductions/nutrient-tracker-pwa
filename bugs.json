@@ -175,5 +175,19 @@
     "fixedBy": "pwa-specialist",
     "fixedDate": "2026-08-13",
     "fixNotes": "Added \"./goals.json\" to sw.js's PRECACHE_URLS (right after \"./rdas.json\", grouped with the other data files) and bumped CACHE_NAME from nutrient-tracker-v6 to nutrient-tracker-v7 so installed devices pick up the updated precache list. No other lines in sw.js changed."
+  },
+  {
+    "id": "bug_014",
+    "date": "2026-08-14",
+    "severity": "warning",
+    "status": "fixed",
+    "area": "ui",
+    "title": "AI (Adequate Intake) badge never showed in the common 'not logged today' state",
+    "description": "A readability-audit fix added an 'AI (est.)' badge to microRowHtml() (index.html ~3269) for aiOnly nutrients (pantothenicacid_mg, biotin_mcg, choline_mg, vitamink_mcg, chromium_mcg, manganese_mg, potassium_mg, sodium_mg per rdas.json), but that function only builds rows for nutrients with real logged data today (getMicronutrientStatus() only maps Object.keys(getDailyMicronutrientTotals(...))). The far more common 'nothing logged for this nutrient yet' state is rendered by a completely separate function, microNoDataRowHtml(key) (~3342), which built its row directly from state.rdas[key] and never included the badge at all -- caught live in the browser (Micros tab, fresh day, nothing logged) where Pantothenic Acid/Biotin/Choline/Vitamin K all showed no badge despite being aiOnly.",
+    "affectedLines": "index.html ~3342-3352 (microNoDataRowHtml())",
+    "foundBy": "user (live browser testing)",
+    "fixedBy": "ui-builder",
+    "fixedDate": "2026-08-14",
+    "fixNotes": "Added the identical AI badge markup microRowHtml() already used (same .ai-badge class, \"AI (est.)\" text, tooltip) to microNoDataRowHtml(), gated on meta.aiOnly (meta = state.rdas[key], same source getUserRDA() reads elsewhere). Re-verified live: badge now shows correctly on Pantothenic Acid/Biotin/Choline/Vitamin K in the no-data state."
   }
 ]

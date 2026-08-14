@@ -512,6 +512,22 @@
   .coach-suggestion-row, .coach-supplement-suggestion, #coachDataQualityContent .food-row {
     min-height: 44px;
   }
+
+  /* Log tab's Food/Supplement mode toggle (#logModeFoodBtn/#logModeSupplementBtn,
+     see switchLogMode()). button.primary/.secondary's own padding (13px/12px)
+     falls a little short of this app's 44px touch-target convention once
+     placed side-by-side at flex:1 -- same scoped-floor pattern as
+     #scanBarcodeBtn/#barcodeModalCancel/#addFoodMicroToggle above. */
+  #logModeFoodBtn, #logModeSupplementBtn { min-height: 44px; }
+
+  /* "tap 💊 to add" empty-state affordance (renderSupplementSummary()) --
+     a real <button> styled to read identically to the plain .empty text it
+     replaces (no visible button chrome) but with a 44px touch target. */
+  .empty-action-btn {
+    display: block; width: 100%; background: none; border: none;
+    color: var(--text-secondary); font-size: 13px; text-align: center;
+    padding: 16px 0; font: inherit; min-height: 44px; cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -553,9 +569,14 @@
   </section>
 
   <section class="card">
-    <h2>Log a food</h2>
-    <input type="text" id="searchInput" class="search-input" placeholder="Search foods…" autocomplete="off" />
+    <h2>Log an item</h2>
+    <div style="display:flex; gap:8px; margin-bottom:10px;">
+      <button class="primary" id="logModeFoodBtn" type="button" style="flex:1; width:auto;">🥗 Food</button>
+      <button class="secondary" id="logModeSupplementBtn" type="button" style="flex:1; width:auto;">💊 Supplement</button>
+    </div>
+    <input type="text" id="itemSearchInput" class="search-input" placeholder="Search foods…" autocomplete="off" />
     <div class="food-list" id="foodList"></div>
+    <div id="supplementList" style="display:none;"></div>
   </section>
 
   <section class="card">
@@ -657,16 +678,6 @@
 
   </div>
 
-  <div id="supplementsView" style="display:none">
-
-  <section class="card">
-    <h2>Supplements</h2>
-    <input type="text" id="supplementSearchInput" class="search-input" placeholder="Search supplements…" autocomplete="off" />
-    <div id="supplementList"></div>
-  </section>
-
-  </div>
-
   <div id="microView" style="display:none">
 
   <section class="card">
@@ -742,9 +753,6 @@
 <nav class="bottom-nav" id="bottomNav">
   <button class="nav-btn active" id="navLogBtn" data-view="logView" type="button">
     <span class="nav-icon">📋</span><span>Log</span>
-  </button>
-  <button class="nav-btn" id="navSupplementsBtn" data-view="supplementsView" type="button">
-    <span class="nav-icon">💊</span><span>Supplements</span>
   </button>
   <button class="nav-btn" id="navMicroBtn" data-view="microView" type="button">
     <span class="nav-icon">🧬</span><span>Micros</span>
@@ -3108,7 +3116,7 @@
   }
 
   function renderFoodList() {
-    var query = document.getElementById("searchInput").value.trim().toLowerCase();
+    var query = document.getElementById("itemSearchInput").value.trim().toLowerCase();
     var container = document.getElementById("foodList");
     var foods = allFoods().filter(function (f) {
       return !query || f.name.toLowerCase().indexOf(query) !== -1 ||
@@ -3142,7 +3150,7 @@
     });
   }
 
-  // ---------- supplements list (Supplements tab) ----------
+  // ---------- supplements list (Log tab, Supplement mode) ----------
   var SUPPLEMENT_CATEGORY_ORDER = [
     { key: "vitamin", label: "VITAMINS" },
     { key: "mineral", label: "MINERALS" },
@@ -3151,7 +3159,7 @@
   ];
 
   function renderSupplementList() {
-    var searchEl = document.getElementById("supplementSearchInput");
+    var searchEl = document.getElementById("itemSearchInput");
     var container = document.getElementById("supplementList");
     if (!searchEl || !container) return;
     var query = searchEl.value.trim().toLowerCase();
@@ -3556,7 +3564,17 @@
     if (!container) return;
     var items = getDailySupplementSummary();
     if (items.length === 0) {
-      container.innerHTML = '<div class="empty">No supplements logged today — tap 💊 to add</div>';
+      container.innerHTML = '<button type="button" class="empty-action-btn" id="supplementSummaryAddBtn">No supplements logged today — tap 💊 to add</button>';
+      // switchLogMode()/itemSearchInput are declared further down this file
+      // (near the search wiring), but as `function`/top-level `var`
+      // declarations they're hoisted/assigned well before this handler can
+      // ever actually fire (same reasoning as microRowHtml()'s
+      // switchView() call above and this file's other forward references).
+      document.getElementById("supplementSummaryAddBtn").addEventListener("click", function () {
+        switchLogMode("supplement");
+        itemSearchInput.focus();
+        itemSearchInput.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
       return;
     }
     container.innerHTML = items.map(function (it) {
@@ -4537,9 +4555,33 @@
   window.addEventListener("online", updateOnlineStatus);
   window.addEventListener("offline", updateOnlineStatus);
 
-  // ---------- search ----------
-  document.getElementById("searchInput").addEventListener("input", renderFoodList);
-  document.getElementById("supplementSearchInput").addEventListener("input", renderSupplementList);
+  // ---------- search (shared Food/Supplement toggle, Log tab) ----------
+  // #foodList and #supplementList are both always present in the DOM (same
+  // "swap display, not content" principle as #coachToggleMealPlanBtn's
+  // meal-plan collapse) -- only the container matching logMode is shown, and
+  // the shared #itemSearchInput drives whichever render function is active.
+  var logMode = "food"; // "food" | "supplement"
+  var logModeFoodBtn = document.getElementById("logModeFoodBtn");
+  var logModeSupplementBtn = document.getElementById("logModeSupplementBtn");
+  var itemSearchInput = document.getElementById("itemSearchInput");
+  var foodListEl = document.getElementById("foodList");
+  var supplementListEl = document.getElementById("supplementList");
+
+  function switchLogMode(mode) {
+    logMode = mode;
+    logModeFoodBtn.className = mode === "food" ? "primary" : "secondary";
+    logModeSupplementBtn.className = mode === "supplement" ? "primary" : "secondary";
+    foodListEl.style.display = mode === "food" ? "" : "none";
+    supplementListEl.style.display = mode === "supplement" ? "" : "none";
+    itemSearchInput.placeholder = mode === "food" ? "Search foods…" : "Search supplements…";
+    if (mode === "food") renderFoodList(); else renderSupplementList();
+  }
+  logModeFoodBtn.addEventListener("click", function () { switchLogMode("food"); });
+  logModeSupplementBtn.addEventListener("click", function () { switchLogMode("supplement"); });
+
+  itemSearchInput.addEventListener("input", function () {
+    if (logMode === "food") renderFoodList(); else renderSupplementList();
+  });
 
   // ---------- Nutrition Coach view ----------
   // UI layer only -- every number/list here comes from the 10 log-engine
@@ -4844,7 +4886,7 @@
     });
     container.querySelectorAll(".coach-supplement-suggestion").forEach(function (btn) {
       btn.addEventListener("click", function () {
-        openSupplementModal(btn.getAttribute("data-vitamin-id")); // same supplement-logging modal used from the Supplements tab -- not a second modal
+        openSupplementModal(btn.getAttribute("data-vitamin-id")); // same supplement-logging modal used from the Log tab's Supplement mode -- not a second modal
       });
     });
   }
@@ -5138,7 +5180,6 @@
       closeBarcodeModal();
     }
     document.getElementById("logView").style.display = viewId === "logView" ? "" : "none";
-    document.getElementById("supplementsView").style.display = viewId === "supplementsView" ? "" : "none";
     document.getElementById("microView").style.display = viewId === "microView" ? "" : "none";
     document.getElementById("coachView").style.display = viewId === "coachView" ? "" : "none";
     navButtons.forEach(function (btn) {
