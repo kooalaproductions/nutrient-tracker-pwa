@@ -569,19 +569,6 @@
   </section>
 
   <section class="card">
-    <div class="cal-header">
-      <h2>History</h2>
-      <div style="display:flex; align-items:center; gap:10px;">
-        <button class="cal-nav-btn" id="calPrev">‹</button>
-        <span class="cal-month-label" id="calMonthLabel"></span>
-        <button class="cal-nav-btn" id="calNext">›</button>
-      </div>
-    </div>
-    <div class="cal-grid" id="calGrid"></div>
-    <div class="recent-days" id="recentDays"></div>
-  </section>
-
-  <section class="card">
     <h2>Backup &amp; restore</h2>
     <p class="food-meta" style="margin-bottom:10px;">Your data only lives on this device. Export a backup now and then, so you can restore it if you clear your browser or switch phones.</p>
     <div class="backup-actions">
@@ -752,6 +739,23 @@
 
   </div>
 
+  <div id="analyticsView" style="display:none">
+
+  <section class="card">
+    <div class="cal-header">
+      <h2>History</h2>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <button class="cal-nav-btn" id="calPrev">‹</button>
+        <span class="cal-month-label" id="calMonthLabel"></span>
+        <button class="cal-nav-btn" id="calNext">›</button>
+      </div>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="recent-days" id="recentDays"></div>
+  </section>
+
+  </div>
+
 </main>
 
 <nav class="bottom-nav" id="bottomNav">
@@ -766,6 +770,9 @@
   </button>
   <button class="nav-btn" id="navCoachBtn" data-view="coachView" type="button">
     <span class="nav-icon">🧠</span><span>Coach</span>
+  </button>
+  <button class="nav-btn" id="navAnalyticsBtn" data-view="analyticsView" type="button">
+    <span class="nav-icon">📊</span><span>Analytics</span>
   </button>
 </nav>
 
@@ -5197,6 +5204,7 @@
     document.getElementById("addItemView").style.display = viewId === "addItemView" ? "" : "none";
     document.getElementById("microView").style.display = viewId === "microView" ? "" : "none";
     document.getElementById("coachView").style.display = viewId === "coachView" ? "" : "none";
+    document.getElementById("analyticsView").style.display = viewId === "analyticsView" ? "" : "none";
     navButtons.forEach(function (btn) {
       btn.classList.toggle("active", btn.getAttribute("data-view") === viewId);
     });
