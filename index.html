@@ -498,7 +498,7 @@
      (shared classes falling a bit short, fixed per-id/class rather than
      widening the shared rule everywhere it's used). */
   #coachGenerateMealPlanBtn, #coachRegeneratePlanBtn, #coachSavePlanBtn,
-  #coachBackToPreviousPlanBtn,
+  #coachBackToPreviousPlanBtn, #coachToggleMealPlanBtn,
   .coach-log-meal-btn, .coach-regen-slot-btn, #coachCheckinSaveBtn, #coachCompleteProfileBtn,
   .coach-suggestion-row, .coach-supplement-suggestion, #coachDataQualityContent .food-row {
     min-height: 44px;
@@ -711,6 +711,7 @@
   <section class="card">
     <h2>📋 Suggested Meal Plan</h2>
     <button class="primary" id="coachGenerateMealPlanBtn" type="button">Generate My Meal Plan</button>
+    <button class="secondary" id="coachToggleMealPlanBtn" type="button" style="display:none; margin-top:10px;">Hide Meal Plan</button>
     <div id="coachMealPlanResult"></div>
   </section>
 
@@ -4876,6 +4877,15 @@
   function renderMealPlanResult(plan) {
     var container = document.getElementById("coachMealPlanResult");
     if (!container) return;
+    // Keep #coachToggleMealPlanBtn's visibility in sync with whether a plan
+    // currently exists, on every call regardless of path (generate/
+    // regenerate/per-meal-swap/undo all funnel through here). Deliberately
+    // only touches the toggle BUTTON's visibility, never the container's own
+    // display -- that's the toggle button's click handler's job alone (see
+    // #coachToggleMealPlanBtn below), so collapse/expand state persists
+    // across regenerate/swap/undo instead of being reset by them.
+    var toggleBtn = document.getElementById("coachToggleMealPlanBtn");
+    if (toggleBtn) toggleBtn.style.display = plan ? "" : "none";
     if (!plan) { container.innerHTML = ""; return; }
 
     var mealsHtml = plan.meals.map(function (meal, idx) {
@@ -5018,6 +5028,21 @@
       btn.disabled = false;
       btn.textContent = "Generate My Meal Plan";
     }, 200);
+  });
+
+  // Collapses/re-expands the generated plan (all meal cards, totals, buttons)
+  // without losing it: toggles #coachMealPlanResult's CSS display only, never
+  // its content -- renderMealPlanResult() above owns rewriting the content
+  // and never touches this element's .style.display, so this state naturally
+  // survives regenerate/per-meal-swap/undo. Own visibility is kept in sync
+  // with whether a plan exists by renderMealPlanResult() itself (see top of
+  // that function), not here.
+  document.getElementById("coachToggleMealPlanBtn").addEventListener("click", function () {
+    var result = document.getElementById("coachMealPlanResult");
+    var btn = document.getElementById("coachToggleMealPlanBtn");
+    var isHidden = result.style.display === "none";
+    result.style.display = isHidden ? "" : "none";
+    btn.textContent = isHidden ? "Hide Meal Plan" : "Show Meal Plan";
   });
 
   // ---- "Improve Your Data" ----
