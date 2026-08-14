@@ -428,6 +428,24 @@ These agents live in `.claude/agents/` and are auto-available every session.
       unaffected — this only changed how the lists are reached, not
       what tapping a result does. qa-reviewer targeted audit: PASS,
       no findings.)
+- [x] index.html — moved "Log an item" to its own ➕ Add tab
+      (2026-08-14, immediate follow-on to the merge above)
+      (user wanted the Log tab focused purely on viewing today's
+      progress, not searching/browsing. Bottom nav is 4 tabs again —
+      Log / ➕ Add / Micros / Coach — but reorganized: the Food/
+      Supplement toggle + shared search + both lists moved verbatim
+      into a new #addItemView; the Log tab keeps only Today's totals,
+      Micronutrients summary, Today's supplements, Logged today, Add
+      a custom food, History, and Backup & restore. No new render
+      hook needed on tab-switch — renderAll() already refreshes both
+      lists unconditionally on every log/remove action, so nothing
+      goes stale while the tab isn't visible. The "tap 💊 to add" fix
+      from the previous pass now calls switchView("addItemView")
+      before switchLogMode("supplement") + focus, since the card is
+      no longer on the same page to scroll to. logMode/switchLogMode/
+      itemSearchInput/renderFoodList()/renderSupplementList()
+      internals completely unchanged — only the container's page
+      location moved.)
 
 ### 🔲 Pending (priority order)
 - [ ] iPhone home screen install + real device test
