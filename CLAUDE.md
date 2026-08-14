@@ -301,7 +301,22 @@ These agents live in `.claude/agents/` and are auto-available every session.
       path. One scope simplification from the original spec:
       getOnboardingQuestions() returns advisory {question, why, action}
       cards, not interactive input-widget schemas — rendered as such
-      rather than inventing form fields the function doesn't support.)
+      rather than inventing form fields the function doesn't support.
+      2026-08-13: added getSuggestedSupplements() — Complete Your
+      Nutrients rows now show a secondary, visually distinct 💊
+      supplement suggestion alongside the existing food suggestions,
+      one per missing nutrient, tap-to-log via the existing
+      openSupplementModal() (no new modal). Reuses isSupplementOnlyUL()/
+      getUserRDA()/getDailySupplementMicronutrientTotals() to skip any
+      candidate that would push a supplement-only-UL nutrient
+      (magnesium, niacin, folate, vitamin E) over its real upper limit,
+      and skips a nutrient entirely if any supplement targeting it was
+      already logged today. "Food first — supplements can help close
+      persistent gaps" caption frames this as optional. qa-reviewer
+      targeted audit: PASS, no findings — UL math hand-verified against
+      real data (magnesium's only product, 500mg, correctly blocked
+      against the 350mg supplement-only UL; folate's 680mcg projected
+      dose correctly allowed under the 1000mcg UL).)
 
 ### 🔲 Pending (priority order)
 - [ ] iPhone home screen install + real device test
