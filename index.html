@@ -569,80 +569,6 @@
   </section>
 
   <section class="card">
-    <div class="toggle-row" id="addFoodToggle">
-      <h2 style="margin:0;">Add a custom food</h2>
-      <span class="chevron">▾</span>
-    </div>
-    <button class="secondary" id="scanBarcodeBtn" type="button" style="margin-top:10px;">📷 Scan barcode</button>
-    <div class="form-body" id="addFoodForm">
-      <div>
-        <label for="f_name">Name</label>
-        <input type="text" id="f_name" placeholder="e.g. Homemade Chili" />
-      </div>
-      <div>
-        <label for="f_brand">Brand (optional)</label>
-        <input type="text" id="f_brand" placeholder="e.g. Kirkland Signature" autocomplete="off" />
-      </div>
-      <div class="form-grid">
-        <div>
-          <label for="f_servingSize">Serving size</label>
-          <input type="number" id="f_servingSize" value="1" min="0" step="any" />
-        </div>
-        <div>
-          <label for="f_servingUnitType">Unit</label>
-          <select id="f_servingUnitType">
-            <option value="g">grams</option>
-            <option value="oz">ounces</option>
-            <option value="lb">pounds</option>
-            <option value="kg">kilograms</option>
-            <option value="cup">cups</option>
-            <option value="tbsp">tablespoons</option>
-            <option value="tsp">teaspoons</option>
-            <option value="ml">milliliters</option>
-            <option value="fl oz">fluid ounces</option>
-            <option value="each">each / custom unit</option>
-          </select>
-        </div>
-      </div>
-      <div id="f_servingUnitCustomWrap" style="display:none;">
-        <label for="f_servingUnitCustom">Custom unit name</label>
-        <input type="text" id="f_servingUnitCustom" placeholder="e.g. piece, slice, cookie" />
-      </div>
-      <div id="f_gramsPerServingWrap" style="display:none;">
-        <label for="f_gramsPerServing">Weight of one serving in grams (optional — lets you log this food in grams/oz/lb later)</label>
-        <input type="number" id="f_gramsPerServing" min="0" step="any" placeholder="e.g. 240" />
-      </div>
-      <div class="form-grid">
-        <div><label for="f_calories">Calories</label><input type="number" id="f_calories" min="0" step="any" /></div>
-        <div><label for="f_protein">Protein (g)</label><input type="number" id="f_protein" min="0" step="any" /></div>
-        <div><label for="f_carbs">Carbs (g)</label><input type="number" id="f_carbs" min="0" step="any" /></div>
-        <div><label for="f_fat">Fat (g)</label><input type="number" id="f_fat" min="0" step="any" /></div>
-        <div><label for="f_sugar">Sugar (g)</label><input type="number" id="f_sugar" min="0" step="any" /></div>
-        <div><label for="f_fiber">Fiber (g)</label><input type="number" id="f_fiber" min="0" step="any" /></div>
-        <div><label for="f_sodium">Sodium (mg)</label><input type="number" id="f_sodium" min="0" step="any" /></div>
-      </div>
-      <div class="toggle-row" id="addFoodMicroToggle">
-        <span class="micro-fields-label">Add micronutrients (optional)</span>
-        <span class="chevron">▾</span>
-      </div>
-      <div class="form-body" id="addFoodMicroSection">
-        <div class="form-grid">
-          <div><label for="f_vitamind">Vitamin D (mcg)</label><input type="number" id="f_vitamind" min="0" step="any" /></div>
-          <div><label for="f_vitaminb12">Vitamin B12 (mcg)</label><input type="number" id="f_vitaminb12" min="0" step="any" /></div>
-          <div><label for="f_calcium">Calcium (mg)</label><input type="number" id="f_calcium" min="0" step="any" /></div>
-          <div><label for="f_iron">Iron (mg)</label><input type="number" id="f_iron" min="0" step="any" /></div>
-          <div><label for="f_magnesium">Magnesium (mg)</label><input type="number" id="f_magnesium" min="0" step="any" /></div>
-          <div><label for="f_potassium">Potassium (mg)</label><input type="number" id="f_potassium" min="0" step="any" /></div>
-          <div><label for="f_vitaminc">Vitamin C (mg)</label><input type="number" id="f_vitaminc" min="0" step="any" /></div>
-          <div><label for="f_zinc">Zinc (mg)</label><input type="number" id="f_zinc" min="0" step="any" /></div>
-        </div>
-      </div>
-      <div class="scanned-micro-preview" id="f_scannedMicroPreview" style="display:none;"></div>
-      <button class="primary" id="saveFoodBtn">Save food</button>
-    </div>
-  </section>
-
-  <section class="card">
     <div class="cal-header">
       <h2>History</h2>
       <div style="display:flex; align-items:center; gap:10px;">
@@ -748,6 +674,80 @@
     <input type="text" id="itemSearchInput" class="search-input" placeholder="Search foods…" autocomplete="off" />
     <div class="food-list" id="foodList"></div>
     <div id="supplementList" style="display:none;"></div>
+  </section>
+
+  <section class="card">
+    <div class="toggle-row" id="addFoodToggle">
+      <h2 style="margin:0;">Add a custom food</h2>
+      <span class="chevron">▾</span>
+    </div>
+    <button class="secondary" id="scanBarcodeBtn" type="button" style="margin-top:10px;">📷 Scan barcode</button>
+    <div class="form-body" id="addFoodForm">
+      <div>
+        <label for="f_name">Name</label>
+        <input type="text" id="f_name" placeholder="e.g. Homemade Chili" />
+      </div>
+      <div>
+        <label for="f_brand">Brand (optional)</label>
+        <input type="text" id="f_brand" placeholder="e.g. Kirkland Signature" autocomplete="off" />
+      </div>
+      <div class="form-grid">
+        <div>
+          <label for="f_servingSize">Serving size</label>
+          <input type="number" id="f_servingSize" value="1" min="0" step="any" />
+        </div>
+        <div>
+          <label for="f_servingUnitType">Unit</label>
+          <select id="f_servingUnitType">
+            <option value="g">grams</option>
+            <option value="oz">ounces</option>
+            <option value="lb">pounds</option>
+            <option value="kg">kilograms</option>
+            <option value="cup">cups</option>
+            <option value="tbsp">tablespoons</option>
+            <option value="tsp">teaspoons</option>
+            <option value="ml">milliliters</option>
+            <option value="fl oz">fluid ounces</option>
+            <option value="each">each / custom unit</option>
+          </select>
+        </div>
+      </div>
+      <div id="f_servingUnitCustomWrap" style="display:none;">
+        <label for="f_servingUnitCustom">Custom unit name</label>
+        <input type="text" id="f_servingUnitCustom" placeholder="e.g. piece, slice, cookie" />
+      </div>
+      <div id="f_gramsPerServingWrap" style="display:none;">
+        <label for="f_gramsPerServing">Weight of one serving in grams (optional — lets you log this food in grams/oz/lb later)</label>
+        <input type="number" id="f_gramsPerServing" min="0" step="any" placeholder="e.g. 240" />
+      </div>
+      <div class="form-grid">
+        <div><label for="f_calories">Calories</label><input type="number" id="f_calories" min="0" step="any" /></div>
+        <div><label for="f_protein">Protein (g)</label><input type="number" id="f_protein" min="0" step="any" /></div>
+        <div><label for="f_carbs">Carbs (g)</label><input type="number" id="f_carbs" min="0" step="any" /></div>
+        <div><label for="f_fat">Fat (g)</label><input type="number" id="f_fat" min="0" step="any" /></div>
+        <div><label for="f_sugar">Sugar (g)</label><input type="number" id="f_sugar" min="0" step="any" /></div>
+        <div><label for="f_fiber">Fiber (g)</label><input type="number" id="f_fiber" min="0" step="any" /></div>
+        <div><label for="f_sodium">Sodium (mg)</label><input type="number" id="f_sodium" min="0" step="any" /></div>
+      </div>
+      <div class="toggle-row" id="addFoodMicroToggle">
+        <span class="micro-fields-label">Add micronutrients (optional)</span>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="form-body" id="addFoodMicroSection">
+        <div class="form-grid">
+          <div><label for="f_vitamind">Vitamin D (mcg)</label><input type="number" id="f_vitamind" min="0" step="any" /></div>
+          <div><label for="f_vitaminb12">Vitamin B12 (mcg)</label><input type="number" id="f_vitaminb12" min="0" step="any" /></div>
+          <div><label for="f_calcium">Calcium (mg)</label><input type="number" id="f_calcium" min="0" step="any" /></div>
+          <div><label for="f_iron">Iron (mg)</label><input type="number" id="f_iron" min="0" step="any" /></div>
+          <div><label for="f_magnesium">Magnesium (mg)</label><input type="number" id="f_magnesium" min="0" step="any" /></div>
+          <div><label for="f_potassium">Potassium (mg)</label><input type="number" id="f_potassium" min="0" step="any" /></div>
+          <div><label for="f_vitaminc">Vitamin C (mg)</label><input type="number" id="f_vitaminc" min="0" step="any" /></div>
+          <div><label for="f_zinc">Zinc (mg)</label><input type="number" id="f_zinc" min="0" step="any" /></div>
+        </div>
+      </div>
+      <div class="scanned-micro-preview" id="f_scannedMicroPreview" style="display:none;"></div>
+      <button class="primary" id="saveFoodBtn">Save food</button>
+    </div>
   </section>
 
   </div>
@@ -5186,8 +5186,11 @@
     // no longer visible. barcodeModalBackdrop is declared later in this file
     // (barcode scanner section) but already assigned by the time any click
     // can reach here, since all top-level script statements run before any
-    // event listener fires.
-    if (viewId !== "logView" && barcodeModalBackdrop.classList.contains("open")) {
+    // event listener fires. Scanning only makes sense from the Add tab (the
+    // "Add a custom food" card, and its Scan barcode button, live in
+    // #addItemView), so leaving #addItemView -- not #logView -- is what
+    // should trigger releasing the camera.
+    if (viewId !== "addItemView" && barcodeModalBackdrop.classList.contains("open")) {
       closeBarcodeModal();
     }
     document.getElementById("logView").style.display = viewId === "logView" ? "" : "none";
