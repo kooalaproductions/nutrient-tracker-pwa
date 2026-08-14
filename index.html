@@ -2223,6 +2223,39 @@
     return results;
   }
 
+  // Companion to getMissingNutrients() above: every nutrient that's actually
+  // been meaningfully satisfied today (percentComplete >= 90 AND consumed >
+  // 0, so a nutrient with no target/no intake isn't trivially "complete").
+  // Reuses the exact same data sources/guards as getMissingNutrients()
+  // (getDailyMicronutrientTotals(), getDailyTargets(), the target == null ||
+  // target <= 0 skip, and the same state.rdas[key] displayName/unit source).
+  // Sorted alphabetically by displayName, no limit/cap.
+  function getCompletedNutrientsToday(dateString) {
+    var consumedTotals = getDailyMicronutrientTotals(dateString);
+    var targets = getDailyTargets();
+
+    var results = [];
+    MICRONUTRIENT_KEYS.forEach(function (key) {
+      var targetInfo = targets.micronutrients[key];
+      var target = targetInfo ? targetInfo.target : null;
+      if (target == null || target <= 0) return; // no established RDA -- nothing to be "complete" against
+      var consumed = consumedTotals[key] || 0;
+      var percentComplete = Math.min(100, Math.round((consumed / target) * 100));
+      if (percentComplete < 90 || consumed <= 0) return;
+
+      var meta = state.rdas[key];
+      results.push({
+        key: key,
+        displayName: meta ? meta.displayName : key,
+        unit: meta ? meta.unit : ""
+      });
+    });
+
+    results.sort(function (a, b) { return a.displayName.localeCompare(b.displayName); });
+
+    return results;
+  }
+
   // Scores every food (preloaded + custom) and returns the top `limit`
   // (default 5), deduped by id. Score = nutritionScore + 3 per top-3-missing-
   // nutrient the food has real data for + 2 per matching preferFlag (union
@@ -3283,6 +3316,7 @@
     renderRecentDays();
     renderMicroSummary();
     renderMicroView();
+    if (document.getElementById("coachView").style.display !== "none") renderCoachView();
     showToast("Logged " + food.name);
     maybeWarnUpperLimit();
   }
@@ -3307,6 +3341,7 @@
     renderRecentDays();
     renderMicroSummary();
     renderMicroView();
+    if (document.getElementById("coachView").style.display !== "none") renderCoachView();
     maybeWarnUpperLimit();
     showToast((mealEmoji || "🍽️") + " " + (mealSlotName || "Meal") + " logged — " + (mealItems ? mealItems.length : 0) + " items added");
   }
@@ -3378,6 +3413,7 @@
     renderRecentDays();
     renderMicroSummary();
     renderMicroView();
+    if (document.getElementById("coachView").style.display !== "none") renderCoachView();
     showToast("Logged " + entry.itemName);
     maybeWarnUpperLimit();
     return entry;
@@ -4594,12 +4630,23 @@
   function renderCoachMissingNutrients() {
     var container = document.getElementById("coachMissingNutrients");
     if (!container) return;
+    // Persistent "completed today" acknowledgment (getCompletedNutrientsToday()
+    // above) -- rendered below the missing-nutrient rows (or below the "Great
+    // job" banner when nothing is missing) in BOTH branches below, so
+    // completed nutrients don't just silently vanish from this card with no
+    // acknowledgment. Omitted entirely when nothing's been completed yet today.
+    var completedToday = getCompletedNutrientsToday(todayKey());
+    var completedTodayHtml = completedToday.length === 0 ? "" :
+      '<p class="food-meta" style="margin-top:10px; color:var(--accent);">✅ Completed today: ' +
+        escapeHtml(completedToday.map(function (c) { return c.displayName; }).join(", ")) +
+      '</p>';
     var missing = getMissingNutrients(todayKey()).slice(0, 5);
     if (missing.length === 0) {
       container.innerHTML =
         '<div class="warning-banner" style="background:var(--accent-light); color:var(--accent); border-color:var(--accent);">' +
           '🎉 Great job — you\'re covering all your key nutrients today!' +
-        '</div>';
+        '</div>' +
+        completedTodayHtml;
       return;
     }
     // Shared top-suggestions pool (getSuggestedFoods() -- log-engine's own
@@ -4666,7 +4713,7 @@
           supplementHtml +
         '</div>'
       );
-    }).join("");
+    }).join("") + completedTodayHtml;
     container.querySelectorAll(".coach-suggestion-row").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var food = allFoods().filter(function (f) { return f.id === btn.getAttribute("data-food-id"); })[0];
