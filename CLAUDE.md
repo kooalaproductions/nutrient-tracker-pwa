@@ -478,13 +478,31 @@ These agents live in `.claude/agents/` and are auto-available every session.
       history modal, not anything view-scoped. Nav is getting
       crowded at 5 items on a phone-width bottom bar — worth watching
       as more tabs/content get added.)
+- [x] index.html — Weekly Overview charts (calories + macros) in the
+      Analytics tab (2026-08-14, same-day follow-on)
+      (first real content built on getWeeklyMacroSummary(), which
+      existed since an earlier pass but had zero call sites anywhere
+      until now. Two plain-div bar charts, not one — calories (kcal)
+      and macros (protein/carbs/fat, grams) don't share a unit/scale,
+      so no dual-axis chart. Colors reuse the app's exact existing
+      tokens (--accent, --nutrient-protein/-carbs/-fat) rather than a
+      new palette; a design-system review flagged those macro colors
+      as slightly low-contrast in isolation, so a legend + always-
+      visible value labels + a collapsible "Show as table" fallback
+      (exact numbers, reusing the existing <details> pattern) are
+      mandatory here — identity never depends on color alone. A day
+      with nothing logged renders a muted dash, not a colored zero
+      bar, so "didn't log" is never confused with "logged and ate
+      nothing." New render hook in switchView() for analyticsView,
+      since (unlike the History calendar) nothing else keeps
+      getWeeklyMacroSummary() fresh.)
 
 ### 🔲 Pending (priority order)
 - [ ] Analytics tab: decide + build what else goes here
-      (user's stated plan, 2026-08-14 — trend graphs/charts, etc.
-      (see "Weekly macro chart UI" below, now this tab's natural
-      home). Deliberately deferred to a separate discussion, not
-      scoped yet)
+      (user's stated plan, 2026-08-14 — the Weekly Overview
+      calories/macros charts landed the same day (see ✅ Complete
+      above); still open: what else belongs here beyond that —
+      deliberately deferred to a separate discussion, not scoped yet)
 - [ ] iPhone home screen install + real device test
       (Option C — foundation is solid, needs on-device verify)
 - [ ] Coach tab: collapse sections by default on first visit
@@ -495,9 +513,6 @@ These agents live in `.claude/agents/` and are auto-available every session.
       2026-08-14 readability audit)
 - [ ] Explain DV% (supplements) vs RDA-based percentages are roughly
       the same idea (2026-08-14 readability audit)
-- [ ] Weekly macro chart UI
-      (getWeeklyMacroSummary() is ready, needs ui-builder pass —
-      natural home is the new 📊 Analytics tab, see above)
 - [ ] Calcium upper limit age-split correction in rdas.json
       (currently flat 2500mg, should be 2000mg for age 51+)
 - [ ] OCR nutrition-label scanning
