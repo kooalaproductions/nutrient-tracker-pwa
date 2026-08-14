@@ -462,8 +462,29 @@ These agents live in `.claude/agents/` and are auto-available every session.
       tab) is what releases the camera. No custom-food-saving, form-
       validation, or barcode-scanning logic touched -- pure markup
       relocation plus the one required guard fix.)
+- [x] index.html — new 📊 Analytics tab, moved History (calendar +
+      recent days) there (2026-08-14, same-day follow-on)
+      (nav is 5 tabs now: Log / ➕ Add / 🧬 Micros / 🧠 Coach /
+      📊 Analytics. User's stated plan: this is step one of a larger
+      analytics vision — trend graphs/charts to be discussed and
+      added later, deliberately NOT built yet, scope kept to the tab
+      + calendar move only. No new render hook needed —
+      renderCalendar() was already called unconditionally from
+      renderAll() and every log/remove/import mutation path, so it's
+      never stale on arrival, same reasoning as the two previous tab
+      moves. No hidden dependency this time (checked, unlike the
+      barcode scanner's camera-release guard from the previous pass)
+      — the calendar's day-click/chip handlers open the global
+      history modal, not anything view-scoped. Nav is getting
+      crowded at 5 items on a phone-width bottom bar — worth watching
+      as more tabs/content get added.)
 
 ### 🔲 Pending (priority order)
+- [ ] Analytics tab: decide + build what else goes here
+      (user's stated plan, 2026-08-14 — trend graphs/charts, etc.
+      (see "Weekly macro chart UI" below, now this tab's natural
+      home). Deliberately deferred to a separate discussion, not
+      scoped yet)
 - [ ] iPhone home screen install + real device test
       (Option C — foundation is solid, needs on-device verify)
 - [ ] Coach tab: collapse sections by default on first visit
@@ -475,7 +496,8 @@ These agents live in `.claude/agents/` and are auto-available every session.
 - [ ] Explain DV% (supplements) vs RDA-based percentages are roughly
       the same idea (2026-08-14 readability audit)
 - [ ] Weekly macro chart UI
-      (getWeeklyMacroSummary() is ready, needs ui-builder pass)
+      (getWeeklyMacroSummary() is ready, needs ui-builder pass —
+      natural home is the new 📊 Analytics tab, see above)
 - [ ] Calcium upper limit age-split correction in rdas.json
       (currently flat 2500mg, should be 2000mg for age 51+)
 - [ ] OCR nutrition-label scanning
