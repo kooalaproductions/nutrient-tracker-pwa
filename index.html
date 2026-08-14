@@ -134,6 +134,15 @@
   .food-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
   .food-cal { font-size: 13px; color: var(--text-secondary); white-space: nowrap; margin-left: 10px; }
   .custom-tag { display: inline-block; font-size: 10px; color: var(--accent); border: 1px solid var(--accent); border-radius: 6px; padding: 1px 5px; margin-left: 6px; vertical-align: middle; }
+  /* Adequate Intake badge (microRowHtml(), for aiOnly nutrients) -- used to
+     reuse .custom-tag, which reads as identical to the unrelated "custom
+     food" tag in the Log-a-food list even though the two mean completely
+     different things. Given its own solid-fill pill instead, matching the
+     established .micro-badge.critical/.micro-badge.over-ul convention
+     (solid background + white text) rather than .custom-tag's outline style,
+     and --nutrient-protein (blue) since that color isn't already claimed by
+     any badge/status meaning elsewhere in this file. */
+  .ai-badge { display: inline-block; font-size: 10px; font-weight: 700; color: #fff; background: var(--nutrient-protein); border-radius: 6px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; }
 
   .empty { color: var(--text-secondary); font-size: 13px; text-align: center; padding: 16px 0; }
 
@@ -699,7 +708,8 @@
 
   <section class="card">
     <h2>🎯 Complete Your Nutrients</h2>
-    <p class="food-meta" style="margin-top:-6px; margin-bottom:10px;">Food first — supplements can help close persistent gaps.</p>
+    <p class="food-meta" style="margin-top:-6px; margin-bottom:2px;">⭐ marks nutrients tied to your selected health goals.</p>
+    <p class="food-meta" style="margin-bottom:10px;">Food first — supplements can help close persistent gaps.</p>
     <div id="coachMissingNutrients"></div>
   </section>
 
@@ -845,6 +855,7 @@
   <div class="onboarding-panel">
     <h3>Let's personalize your goals</h3>
     <p class="modal-sub">A few details so we can calculate calorie and nutrient targets for you.</p>
+    <p class="food-meta" style="margin-bottom:10px;">Your data only lives on this device.</p>
     <div id="onboardingFormMount"></div>
     <div class="micro-fields-label" style="margin-top:14px; margin-bottom:2px;">What are your health goals? (up to 3)</div>
     <div id="onboardingHealthGoalsMount"></div>
@@ -867,8 +878,8 @@
 
     <div style="height:1px; background:var(--border); margin:18px 0;"></div>
 
-    <h2>Health goals</h2>
-    <p class="modal-sub" style="margin-top:-6px;">Choose up to 3 focus areas for your coach.</p>
+    <h2>Coach Focus Areas</h2>
+    <p class="modal-sub" style="margin-top:-6px;">Choose up to 3 focus areas for your coach. Separate from your profile's Lose/Maintain/Gain setting above — these are the areas your coach highlights and gives suggestions for.</p>
     <div id="settingsHealthGoalsMount"></div>
 
     <div style="height:1px; background:var(--border); margin:18px 0;"></div>
@@ -878,7 +889,7 @@
 
     <div style="height:1px; background:var(--border); margin:18px 0;"></div>
 
-    <h2>Goal overrides</h2>
+    <h2>Custom Nutrient Targets</h2>
     <p class="modal-sub" style="margin-top:-6px;">Manually set a target if you'd like something different than the calculated value.</p>
     <div id="settingsGoalsList" style="display:flex; flex-direction:column; gap:10px;"></div>
   </div>
@@ -3084,7 +3095,10 @@
     });
     container.querySelectorAll(".remove-btn").forEach(function (btn) {
       btn.addEventListener("click", function () {
-        removeLogEntry(dateKey, btn.getAttribute("data-id"));
+        var id = btn.getAttribute("data-id");
+        showConfirm("Remove this entry?", "This can't be undone.", function () {
+          removeLogEntry(dateKey, id);
+        });
       });
     });
   }
@@ -3253,7 +3267,7 @@
   // RDA) -- shown as a plain consumed amount with no bar/percent rather than
   // "null%"/"NaN%".
   function microRowHtml(row) {
-    var aiHtml = row.aiOnly ? ' <span class="custom-tag">AI</span>' : '';
+    var aiHtml = row.aiOnly ? ' <span class="ai-badge" title="Adequate Intake — no formal RDA exists for this nutrient, so this is a rougher estimate">AI (est.)</span>' : '';
     var barHtml = "";
     var pctHtml = "";
     var amountText;
